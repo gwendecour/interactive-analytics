@@ -38,15 +38,12 @@ st.markdown("""
 render_header()
 
 st.title("Derivatives Pricing & Risk Management")
-with st.expander("Pourquoi ce projet ?"):
+with st.expander("The motivations behind this project"):
     st.markdown("""
     ### Building a Complete Front-to-Back Derivatives Engine
     In investment banking, pricing and hedging exotic derivatives (like Phoenix Autocalls) requires robust numerical methods and infrastructure. Standard models like Black-Scholes are powerful for Vanilla options, but fail for path-dependent structured products.
 
-    **The objective?** To build a fully autonomous pricing engine capable of:
-    1. Fetching real-time market data (Spot, Volatility Surface, Dividends).
-    2. Pricing complex path-dependent payoffs using heavy Monte-Carlo simulations.
-    3. Computing the Greeks (Delta, Gamma, Vega) via finite differences to manage the bank's risk book dynamically over time.
+    This module was built to act as a fully autonomous pricing engine capable of fetching real-time market data (Spot, Volatility Surface, Dividends), pricing complex path-dependent payoffs using heavy Monte-Carlo simulations, and computing the Greeks (Delta, Gamma, Vega) via finite differences to manage the bank's risk book dynamically over time.
     """)
 
 # ==============================================================================
@@ -360,7 +357,7 @@ with st.container(border=True):
             d = st.session_state.custom_div
             
             # Display only if loaded
-            display_text = f"Spot: <b style='color:black'>{s:.2f}</b> | Vol: <b style='color:black'>{v:.1%}</b> | r: {r:.1%} | q: {d:.1%}"
+            display_text = f"Spot: <b>{s:.2f}</b> | Vol: <b>{v:.1%}</b> | r: {r:.1%} | q: {d:.1%}"
             
             st.markdown(f"<div style='text-align:right; padding-top:5px; font-family:monospace; color:gray;'>"
                         f"{display_text}</div>", unsafe_allow_html=True)
@@ -381,8 +378,7 @@ if not selected_ticker or not selected_product or st.session_state.get('market_s
 # ==============================================================================
 # TABS
 # ==============================================================================
-selected_tab = st.segmented_control("Navigation", ["Pricing & Payoff", "Greeks & Heatmaps", "Delta Hedging"], default="Pricing & Payoff", label_visibility="collapsed")
-if not selected_tab: selected_tab = "Pricing & Payoff"
+selected_tab = st.radio("Navigation", ["Pricing & Payoff", "Greeks & Heatmaps", "Delta Hedging"], horizontal=True, label_visibility="collapsed")
 
 S, sigma = st.session_state.custom_spot, st.session_state.custom_vol
 r, q = st.session_state.custom_rate, st.session_state.custom_div
@@ -1163,21 +1159,14 @@ elif selected_tab == "Delta Hedging":
                     # Financials Breakdown
                     premium = met['Option Premium']
                     costs = met['Total Transaction Costs']
+                    total_payout_paid = met['Phoenix Payouts Included'] # Engine calculates this for all products
                     
-                    if p_type == "Phoenix":
-                        total_payout_paid = met['Phoenix Payouts Included']
-                        net_pnl = met['Engine P&L'] 
-                        # Trading P&L approximation for Phoenix
-                        trading_result = net_pnl - premium + total_payout_paid + costs
-                    else:
-                        # Vanilla: Re-calculate payout (since Engine ignores it)
-                        if is_call: vanilla_payout = max(final_S - strike_val, 0.0)
-                        else:       vanilla_payout = max(strike_val - final_S, 0.0)
-                        
-                        total_payout_paid = vanilla_payout
-                        net_pnl = met['Engine P&L'] - vanilla_payout
-                        # Trading P&L = Engine Result - Premium + Costs
-                        trading_result = met['Engine P&L'] - premium + costs
+                    # The backtester naturally pays out the liability via its cash account.
+                    net_pnl = met['Engine P&L'] 
+                    
+                    # Equation: Net P&L = Premium + Trading_PnL - Payout - Costs
+                    # => Trading_PnL = Net P&L - Premium + Payout + Costs
+                    trading_result = net_pnl - premium + total_payout_paid + costs
 
                     # --- KPI DISPLAY ---
                     st.subheader("Performance Breakdown")

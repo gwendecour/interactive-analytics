@@ -45,16 +45,15 @@ def update_corr_from_bottom():
 st.set_page_config(page_title="AlphaStream Strategy", page_icon="assets/logo.png", layout="wide", initial_sidebar_state="collapsed")
 render_header()
 
-st.title("Systematic Macro & Risk-On/Risk-Off Strategy")
-with st.expander("Pourquoi ce projet ?"):
+st.title("Pure Alpha Generation & Beta Neutralization")
+with st.expander("The motivations behind this project"):
     st.markdown("""
-    ### Cross-Asset Momentum & Dynamic Correlation Filter
-    Systematic trend-following (CTA) strategies thrive on capturing sustained market moves. However, blindly following trends across a highly correlated universe leads to dangerous portfolio concentration and sudden, violent drawdowns when the entire market reverses.
+    ### The Natixis Student Challenge & Asset Allocation
+    I initially designed the baseline of this project as part of my participation in the **Natixis Student Challenge**. Although my team was not selected for the final rounds, I wanted to push the study further to deeply analyze the performance of our investment strategy.
 
-    **The objective?** To build a robust systematic engine that dynamically filters out correlated bets. 
-    1. The core Alpha engine generates pure momentum signals (Risk-On / Risk-Off).
-    2. The Risk engine penalizes new signals if their underlying asset is too highly correlated with the existing portfolio.
-    This creates an all-weather portfolio structurally resistant to massive market whiplashes.
+    My objective was to build a robust systematic engine combining several key concepts—primarily establishing **Risk Parity** across three main asset classes (Equities, Bonds, Commodities), while actively deploying **Momentum Seeking** signals that dynamically limit clustering and highly correlated bets. This approach ultimately creates an all-weather portfolio structurally resistant to massive market whiplashes.
+    
+    *(Note: The original Natixis strategy also included a strong ESG component with score attribution constraints, which I chose to omit in this specific dashboard focus).*
     """)
 
 st.markdown("""
@@ -203,17 +202,17 @@ if btn_run or st.session_state.run_trigger:
             st.error(f"Critical Error during execution: {e}")
 
 # --- TABS DISPLAY ---
-tab_overview, tab_allocation, tab_signals, tab_risk = st.tabs([
+selected_tab = st.radio("Navigation", [
     " Overview & Performance", 
     " Asset Allocation", 
     " Signals & Selection", 
     " Risk & Hedge"
-])
+], horizontal=True, label_visibility="collapsed")
 
 # ==============================================================================
 # TAB 1: OVERVIEW & PERFORMANCE
 # ==============================================================================
-with tab_overview:
+if selected_tab == " Overview & Performance":
     if st.session_state.backtest_results is not None:
         results_dict = st.session_state.backtest_results
         nav_series = results_dict['NAV'] # Historical Net Asset Value vector
@@ -308,7 +307,7 @@ with tab_overview:
 # ==============================================================================
 # TAB 2: ASSET ALLOCATION
 # ==============================================================================
-with tab_allocation:
+if selected_tab == " Asset Allocation":
     if st.session_state.backtest_results is not None:
         results_dict = st.session_state.backtest_results
         weights_df = results_dict['Weights']
@@ -325,16 +324,33 @@ with tab_allocation:
         fig_alloc = analytics.plot_dynamic_allocation(weights_df, universe_dict)
         st.plotly_chart(fig_alloc, use_container_width=True)
         
+        with st.expander("Understanding the Allocation Evolution"):
+            st.markdown("""
+            This area chart displays the continuous weight of each asset class over time. 
+            It highlights how the **Risk Parity** weighting correctly redistributes allocations during volatile periods, dynamically shifting exposure between Equities, Bonds, and Commodities based on inverse volatility and momentum stability.
+            """)
+        
         # Asset Rotation Heatmap
         # A chronological matrix showing the Top N largest individual positions.
         # Useful for visualizing how the algorithm rotates out of underperforming assets (e.g. pivoting from Tech to Bonds).
+        st.markdown("### Asset Rotation & Attribution")
         fig_heatmap = analytics.plot_asset_rotation_heatmap(weights_df, top_n_display=12)
         st.plotly_chart(fig_heatmap, use_container_width=True)
+        
+        with st.expander("Understanding Asset Rotation"):
+            st.markdown("""
+            The **Heatmap** acts as a chronological matrix highlighting the historically largest individual positions. It visually confirms how the algorithm aggressively rotates out of underperforming assets (e.g., pivoting seamlessly from Tech to Safe-Haven Bonds just before a major Equity drawdown).
+            """)
 
         st.caption("What drove the monthly returns? (Weighted Contribution by Asset Class)")
         if market_df is not None:
             fig_contrib = analytics.plot_monthly_contribution(weights_df, market_df, universe_dict)
             st.plotly_chart(fig_contrib, use_container_width=True)
+            
+            with st.expander("Understanding Monthly Contribution"):
+                st.markdown("""
+                This bar chart breaks down the total historical monthly performance, isolating the exact **P&L contribution** of each asset class. It allows us to verify if a positive month was driven by Equity momentum or by the protective mechanism of Bond hedging.
+                """)
         else:
             st.warning("Market data missing for attribution analysis. Please re-run the backtest.")
 
@@ -392,7 +408,7 @@ with tab_allocation:
 # ==============================================================================
 # TAB 3: SIGNALS & SELECTION
 # ==============================================================================
-with tab_signals:
+if selected_tab == " Signals & Selection":
     market_df = st.session_state.get('market_data', None)
     results_dict = st.session_state.get('backtest_results', {})
     
@@ -557,7 +573,7 @@ with tab_signals:
 # ==============================================================================
 # TAB 4: RISK & HEDGE
 # ==============================================================================
-with tab_risk:
+if selected_tab == " Risk & Hedge":
     results_dict = st.session_state.get('backtest_results', None)
     market_df = st.session_state.get('market_data', None)
 

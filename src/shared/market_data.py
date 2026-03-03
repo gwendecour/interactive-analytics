@@ -124,12 +124,22 @@ class MarketData:
                 print("Error: Downloaded DataFrame is empty.")
                 return None, None
 
-            if 'Adj Close' in raw_data.columns:
-                raw_df = raw_data['Adj Close']
-            elif 'Close' in raw_data.columns:
-                raw_df = raw_data['Close']
+            # Extract price column (handling MultiIndex for new yf versions)
+            if isinstance(raw_data.columns, pd.MultiIndex):
+                top_level_cols = raw_data.columns.get_level_values(0)
+                if 'Adj Close' in top_level_cols:
+                    raw_df = raw_data['Adj Close']
+                elif 'Close' in top_level_cols:
+                    raw_df = raw_data['Close']
+                else:
+                    return None, None
             else:
-                return None, None
+                if 'Adj Close' in raw_data.columns:
+                    raw_df = raw_data['Adj Close']
+                elif 'Close' in raw_data.columns:
+                    raw_df = raw_data['Close']
+                else:
+                    return None, None
 
             # Diagnostics
             total_points = raw_df.size

@@ -1,3 +1,4 @@
+import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
@@ -42,7 +43,7 @@ def plot_payoff_european(option, spot_range):
         line=dict(color='red', width=3)
     ))
 
-    fig.add_hline(y=0, line_color="white", line_width=1, opacity=0.5)
+    fig.add_hline(y=0, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", line_width=1, opacity=0.5)
 
     fig.add_vline(
         x=option.K, 
@@ -60,7 +61,7 @@ def plot_payoff_european(option, spot_range):
         title=f" ",
         xaxis_title="Underlying price at maturity",
         yaxis_title="Profit / Loss (€)",
-        template="plotly_dark", 
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", 
         hovermode="x unified",   
         legend=dict(
             yanchor="top",
@@ -101,7 +102,7 @@ def plot_price_vs_strike_european(option, current_spot):
         x=[current_k], y=[current_price],
         mode='markers',
         name='Your Selection',
-        marker=dict(color='red', size=12, line=dict(color='white', width=2))))
+        marker=dict(color='red', size=12, line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=2))))
     
     fig.add_vline(x=current_spot, line_dash="dot", line_color="gray", annotation_text="Current Spot")
 
@@ -109,7 +110,7 @@ def plot_price_vs_strike_european(option, current_spot):
         title=" ", 
         xaxis_title="Strike Price",
         yaxis_title="Option Price (€)",
-        template="plotly_white",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         height=300,
         margin=dict(l=40, r=20, t=10, b=40),
         hovermode="x unified",
@@ -134,13 +135,13 @@ def plot_price_vs_vol_european(option, current_vol):
     
     curr_price = option.price()
     fig.add_trace(go.Scatter(x=[current_vol*100], y=[curr_price], mode='markers', name='Current Vol', 
-                             marker=dict(color='red', size=12, line=dict(color='white', width=2))))
+                             marker=dict(color='red', size=12, line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=2))))
     
     fig.update_layout(
         title=" ", 
         xaxis_title="Volatility (%)",
         yaxis_title="Option Price (€)",
-        template="plotly_white",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         height=300,
         margin=dict(l=40, r=20, t=10, b=40),
         showlegend=True,
@@ -256,7 +257,7 @@ def plot_risk_profile_european(option, spot_range):
     fig.update_layout(
         title="Hedging Difficulties: Gamma & Vega Sensitivity",
         xaxis_title="Spot Price (Scenarios)",
-        template="plotly_dark",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
@@ -313,7 +314,7 @@ def plot_payoff_phoenix(struct, spot_range=None):
         title=" ",
         xaxis_title="Spot Price at Maturity",
         yaxis_title="Payoff (% Nominal)",
-        template="plotly_white",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         height=350,
         margin=dict(l=20, r=20, t=20, b=20),
         hovermode="x unified"
@@ -343,7 +344,7 @@ def plot_price_vs_strike_phoenix(struct, current_spot):
         title=" ",
         xaxis_title="Spot Price",
         yaxis_title="Phoenix Price",
-        template="plotly_white",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         height=300,
         margin=dict(l=40, r=20, t=30, b=40)
     )
@@ -372,7 +373,7 @@ def plot_price_vs_vol_phoenix(struct, current_vol):
         title=" ",
         xaxis_title="Volatility (%)",
         yaxis_title="Phoenix Price",
-        template="plotly_white",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         height=300,
         margin=dict(l=40, r=20, t=30, b=40)
     )
@@ -436,7 +437,7 @@ def plot_phoenix_tunnel(struct):
         fig.add_hline(y=struct.coupon_barrier, line_dash="dot", line_color="cyan", annotation_text="Coupon Lvl")
         
     for idx in obs_indices:
-        fig.add_vline(x=idx, line_width=1, line_color="white", opacity=0.2)
+        fig.add_vline(x=idx, line_width=1, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", opacity=0.2)
         
     n_auto, n_safe, n_crash = np.sum(autocall_mask), np.sum(safe_mask), np.sum(crash_mask)
     stats_text = (
@@ -453,7 +454,7 @@ def plot_phoenix_tunnel(struct):
         showarrow=False,
         align="right",
         bgcolor="rgba(0,0,0,0.8)",
-        bordercolor="white",
+        bordercolor="white" if st.session_state.get("theme", "dark") == "dark" else "black",
         borderwidth=1
     )
 
@@ -461,7 +462,7 @@ def plot_phoenix_tunnel(struct):
         title="Monte Carlo Path Analysis (Tunnel)",
         xaxis_title="Trading Days",
         yaxis_title="Spot Price",
-        template="plotly_dark",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         showlegend=True
     )
     
@@ -493,7 +494,7 @@ def plot_phoenix_distribution(struct):
     fig.update_layout(
         xaxis_title="Payoff (% Nominal)",
         yaxis_title="Frequency",
-        template="plotly_dark",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         bargap=0.1
     )
     return fig
@@ -538,7 +539,7 @@ def plot_mc_noise_distribution(struct):
     fig.update_layout(
         xaxis_title="Price Estimate (% Nominal)",
         yaxis_title="Count",
-        template="plotly_dark",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         bargap=0.1
     )
     return fig
@@ -615,7 +616,7 @@ def plot_pnl(engine):
     fig.add_trace(go.Scatter(
         x=df[date_col], y=df['Spot'], 
         name="Spot Trend (Ref)", 
-        line=dict(color='white', width=1, dash='solid'), 
+        line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=1, dash='solid'), 
         opacity=0.3,
         showlegend=True
     ), row=2, col=1, secondary_y=True)
@@ -629,7 +630,7 @@ def plot_pnl(engine):
 
     fig.update_layout(
         height=900, 
-        template="plotly_dark", 
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", 
         hovermode="x unified", 
         showlegend=True,
         legend=dict(
@@ -745,7 +746,7 @@ def plot_risk_matrix(product, spot_range_pct=0.10, vol_range_pct=0.05, n_spot_st
         title="Dynamic Risk Matrices",
         xaxis_title="Spot Variation", 
         yaxis_title="Volatility Variation",
-        template="plotly_dark",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         height=500
     )
     fig.update_xaxes(title_text="Spot Variation", row=1, col=2)
@@ -799,11 +800,11 @@ def plot_pnl_attribution(product, spot_move_pct, vol_move_pct, days_passed=0):
         textposition='auto'
     ))
 
-    fig.add_hline(y=0, line_color="white", line_width=1)
+    fig.add_hline(y=0, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", line_width=1)
 
     fig.update_layout(
         title=f"P&L Attribution (Spot {spot_move_pct:+.1%}, Vol {vol_move_pct:+.1%}, {days_passed}j)",
-        template="plotly_dark",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         yaxis_title="Profit / Loss (€)",
         showlegend=False
     )

@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -93,7 +94,7 @@ def plot_equity_curve(portfolio_nav, benchmark_data, benchmark_ticker="Benchmark
     fig.update_layout(
         title={'text': f"<b>Equity Curve vs {benchmark_ticker}</b> (Rebased)", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
         xaxis_title="Date", yaxis_title="Portfolio Value ($)",
-        template="plotly_white", hovermode="x unified",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(l=40, r=40, t=80, b=40)
     )
@@ -147,14 +148,15 @@ def plot_returns_distribution(portfolio_nav, benchmark_data, benchmark_label="Be
     fig.add_annotation(
         xref="paper", yref="paper", x=0.98, y=0.98, xanchor="right", yanchor="top",
         text=stats_text, showarrow=False, align="left",
-        font=dict(family="Courier New, monospace", size=12, color="black"),
-        bgcolor="rgba(255, 255, 255, 0.9)", bordercolor="black", borderwidth=1
+        font=dict(family="Courier New, monospace", size=12, color="white" if st.session_state.get("theme", "dark") == "dark" else "black"),
+        bgcolor="rgba(0, 0, 0, 0.8)" if st.session_state.get("theme", "dark") == "dark" else "rgba(255, 255, 255, 0.9)", 
+        bordercolor="white" if st.session_state.get("theme", "dark") == "dark" else "black", borderwidth=1
     )
 
     fig.update_layout(
         title={'text': "<b>Return Distribution Analysis (KDE)</b>", 'y':0.9, 'x':0.05, 'xanchor': 'left'},
         xaxis_title="Daily Return", yaxis_title="Probability Density",
-        template="plotly_white",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
         xaxis=dict(tickformat=".1%", range=[min_x, max_x], zeroline=True, zerolinewidth=1, zerolinecolor='grey'),
         yaxis=dict(showticklabels=False), 
         legend=dict(x=0.01, y=0.99), margin=dict(l=20, r=20, t=60, b=20), height=450
@@ -191,7 +193,7 @@ def plot_drawdown_underwater(portfolio_nav, benchmark_data, benchmark_label="Ben
     fig.update_layout(
         title={'text': f"<b>Underwater Plot</b> (Drawdown vs {benchmark_label})", 'y':0.9, 'x':0.35, 'xanchor': 'center'},
         xaxis_title="Date", yaxis_title="Drawdown (%)",
-        template="plotly_white", yaxis=dict(tickformat=".0%"), hovermode="x unified",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", yaxis=dict(tickformat=".0%"), hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(l=40, r=40, t=80, b=40)
     )
@@ -229,8 +231,8 @@ def plot_alpha_beta_scatter(nav_series, benchmark_series, view_mode='full'):
         line=dict(color='#FF3131', width=3) 
     ))
 
-    fig.add_hline(y=0, line_width=1, line_color="black", opacity=0.5)
-    fig.add_vline(x=0, line_width=1, line_color="black", opacity=0.5)
+    fig.add_hline(y=0, line_width=1, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", opacity=0.5)
+    fig.add_vline(x=0, line_width=1, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", opacity=0.5)
 
     if view_mode == 'zoomed':
         zoom_range = [-0.002, 0.002]
@@ -241,7 +243,7 @@ def plot_alpha_beta_scatter(nav_series, benchmark_series, view_mode='full'):
             showlegend=False, margin=dict(l=20, r=20, t=40, b=20), height=400
         )
         
-        arrow_col, txt, ay_offset = ("#000000", "<b>POSITIVE ALPHA</b>", 40) if alpha_daily > 0 else ("#EF553B", "Negative Alpha", -40)
+        arrow_col, txt, ay_offset = ("white" if st.session_state.get("theme", "dark") == "dark" else "#000000", "<b>POSITIVE ALPHA</b>", 40) if alpha_daily > 0 else ("#EF553B", "Negative Alpha", -40)
             
         fig.add_annotation(
             x=0, y=alpha_daily, xref="x", yref="y", text=txt,
@@ -252,15 +254,16 @@ def plot_alpha_beta_scatter(nav_series, benchmark_series, view_mode='full'):
         fig.update_layout(
             title="<b> Alpha Generation (Full View)</b>",
             xaxis_title="Benchmark Return", yaxis_title="Strategy Return",
-            template="plotly_white", margin=dict(l=20, r=20, t=40, b=20), height=400,
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255,255,255,0.8)')
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", margin=dict(l=20, r=20, t=40, b=20), height=400,
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(0,0,0,0.5)" if st.session_state.get("theme", "dark") == "dark" else "rgba(255,255,255,0.8)", bordercolor="white" if st.session_state.get("theme", "dark") == "dark" else "black", borderwidth=1)
         )
         
         fig.add_annotation(
             xref="paper", yref="paper", x=0.98, y=0.02, xanchor="right", yanchor="bottom",
             text=f"<b>Alpha (Ann): {alpha_annual:+.2%}</b><br>Beta: {beta:.2f}",
-            showarrow=False, font=dict(size=13, color="black"),
-            bgcolor="#DDDDDD", bordercolor="#000000", borderwidth=2, opacity=0.9
+            showarrow=False, font=dict(size=13, color="white" if st.session_state.get("theme", "dark") == "dark" else "black"),
+            bgcolor="#222222" if st.session_state.get("theme", "dark") == "dark" else "#DDDDDD", 
+            bordercolor="white" if st.session_state.get("theme", "dark") == "dark" else "#000000", borderwidth=2, opacity=0.9
         )
     return fig
 
@@ -285,12 +288,12 @@ def plot_rolling_sharpe(portfolio_nav, benchmark_data, window_months=6, benchmar
     fig.add_trace(go.Scatter(x=roll_sharpe_port.index, y=roll_sharpe_port, mode='lines', name='Strategy', line=dict(color='#00CC96', width=2)))
     fig.add_trace(go.Scatter(x=roll_sharpe_bench.index, y=roll_sharpe_bench, mode='lines', name=f'{benchmark_label}', line=dict(color='#EF553B', width=1.5, dash='dot')))
 
-    fig.add_hline(y=0, line_width=1, line_color="black", line_dash="solid")
+    fig.add_hline(y=0, line_width=1, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", line_dash="solid")
     fig.add_hline(y=1, line_width=1, line_color="gray", line_dash="dot", annotation_text="Good (>1)", annotation_position="bottom right")
 
     fig.update_layout(
         title={'text': f"<b>{window_months}-Month Rolling Sharpe Ratio</b> (Stability)", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
-        xaxis_title="Date", yaxis_title="Sharpe Ratio", template="plotly_white", hovermode="x unified",
+        xaxis_title="Date", yaxis_title="Sharpe Ratio", template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(l=40, r=40, t=80, b=40)
     )
@@ -340,7 +343,7 @@ def plot_dynamic_allocation(history_df, universe_dict):
     fig.update_layout(
         title={'text': "<b>Dynamic Asset Allocation</b> (Evolution by Asset Class)", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
         xaxis_title="Date", yaxis_title="Weight", yaxis=dict(tickformat=".0%", range=[0, 1.05]), 
-        template="plotly_white", hovermode="x unified", margin=dict(l=40, r=40, t=80, b=40)
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", hovermode="x unified", margin=dict(l=40, r=40, t=80, b=40)
     )
     return fig
 
@@ -365,7 +368,7 @@ def plot_asset_rotation_heatmap(history_df, top_n_display=10):
 
     fig.update_layout(
         title={'text': "<b>Asset Rotation Heatmap</b> (Top Holdings History)", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
-        xaxis_title="Date", yaxis_title="Ticker", template="plotly_white", margin=dict(l=40, r=40, t=80, b=40), height=500 
+        xaxis_title="Date", yaxis_title="Ticker", template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", margin=dict(l=40, r=40, t=80, b=40), height=500 
     )
     return fig
 
@@ -405,14 +408,14 @@ def plot_monthly_contribution(history_df, market_df, universe_dict):
     total_monthly = monthly_contrib.sum(axis=1)
     fig.add_trace(go.Scatter(
         x=monthly_contrib.index, y=total_monthly, mode='markers+lines', name='Total Net',
-        line=dict(color='black', width=1, dash='dot'), marker=dict(symbol='diamond', size=6, color='black'),
+        line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=1, dash='dot'), marker=dict(symbol='diamond', size=6, color="white" if st.session_state.get("theme", "dark") == "dark" else "black"),
         hovertemplate='Total: %{y:.2%}<extra></extra>'
     ))
 
     fig.update_layout(
         title={'text': "<b>Monthly Performance Attribution</b> (Weighted Contribution)", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
         xaxis_title="Month", yaxis_title="Monthly Contribution", barmode='relative', 
-        yaxis=dict(tickformat=".1%"), template="plotly_white", hovermode="x unified", margin=dict(l=40, r=40, t=80, b=40)
+        yaxis=dict(tickformat=".1%"), template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", hovermode="x unified", margin=dict(l=40, r=40, t=80, b=40)
     )
     return fig
 
@@ -434,7 +437,7 @@ def plot_allocation_donut(snapshot_series):
     
     fig.update_layout(
         title={'text': f"<b>Allocation Snapshot</b><br><span style='font-size:12px'>Date: {date_str}</span>", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
-        template="plotly_white", margin=dict(l=40, r=40, t=80, b=40), showlegend=False 
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", margin=dict(l=40, r=40, t=80, b=40), showlegend=False 
     )
     return fig
 
@@ -532,7 +535,7 @@ def plot_signal_race(signals_df, highlight_assets=None, signal_method="z_score")
         fig.add_hline(y=30, line_width=1, line_dash="dot", line_color="green", opacity=0.5)
         y_title = "RSI (0-100)"
     elif signal_method in ['z_score', 'distance_ma']:
-        fig.add_hline(y=0, line_width=1.5, line_color="black", opacity=0.8)
+        fig.add_hline(y=0, line_width=1.5, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", opacity=0.8)
         if signal_method == 'z_score':
             fig.add_hline(y=2, line_width=1, line_dash="dot", line_color="gray", opacity=0.5)
             fig.add_hline(y=-2, line_width=1, line_dash="dot", line_color="gray", opacity=0.5)
@@ -541,7 +544,7 @@ def plot_signal_race(signals_df, highlight_assets=None, signal_method="z_score")
 
     fig.update_layout(
         title={'text': f"<b>Signal Evolution Race</b> (Spotlight View)", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
-        xaxis_title="Date", yaxis_title=y_title, template="plotly_white", hovermode="x unified",
+        xaxis_title="Date", yaxis_title=y_title, template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", hovermode="x unified",
         margin=dict(l=40, r=150, t=80, b=40), legend=dict(orientation="v", y=1, x=1.02, xanchor='left', yanchor='top', font=dict(size=10))
     )
     return fig
@@ -587,7 +590,7 @@ def plot_signal_ranking_bar(signals_df, target_date, actual_selections=None):
     dynamic_height = max(250, len(row_sorted) * 30)
     fig.update_layout(
         title=" ", xaxis_title=None, yaxis=dict(autorange=True, tickfont=dict(size=11)), 
-        template="plotly_white", margin=dict(l=10, r=10, t=10, b=20), height=dynamic_height, showlegend=False
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", margin=dict(l=10, r=10, t=10, b=20), height=dynamic_height, showlegend=False
     )
     return fig
 
@@ -619,8 +622,8 @@ def plot_correlation_matrix(market_df, ranking_df, threshold=0.7, window=60):
 
     thresh_norm = (threshold + 1) / 2
     colors = [
-        [0.0, 'white'],           
-        [thresh_norm, 'white'],   
+        [0.0, '#11151c'],           
+        [thresh_norm, '#11151c'],   
         [thresh_norm, '#EF553B'], 
         [1.0, '#B22222']          
     ]
@@ -631,7 +634,7 @@ def plot_correlation_matrix(market_df, ranking_df, threshold=0.7, window=60):
     fig.update_layout(
         title=None, coloraxis_showscale=False, margin=dict(l=0, r=0, t=0, b=0), 
         xaxis=dict(side="bottom", showticklabels=True), yaxis=dict(showticklabels=True),
-        height=450, plot_bgcolor='rgba(240,240,240, 1)'
+        height=450, template="plotly_dark", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
     )
     if len(sorted_tickers) > 8: fig.update_xaxes(tickangle=-45)
     
@@ -651,12 +654,12 @@ def plot_signal_vs_price(market_df, signals_df, ticker):
     full_name = get_asset_name(ticker)
     
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(go.Scatter(x=price_series.index, y=price_series, name=f"{full_name} Price", line=dict(color='black', width=1)), secondary_y=False)
+    fig.add_trace(go.Scatter(x=price_series.index, y=price_series, name=f"{full_name} Price", line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=1)), secondary_y=False)
     fig.add_trace(go.Scatter(x=signal_series.index, y=signal_series, name=f"{full_name} Signal", line=dict(color='#00CC96', width=1.5, dash='dot'), fill='tozeroy', fillcolor='rgba(0, 204, 150, 0.1)'), secondary_y=True)
 
     fig.update_layout(
         title={'text': f"<b>Price vs Signal Analysis</b> ({full_name})", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
-        template="plotly_white", hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), margin=dict(l=40, r=40, t=80, b=40)
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), margin=dict(l=40, r=40, t=80, b=40)
     )
     fig.update_yaxes(title_text="Price ($)", secondary_y=False)
     fig.update_yaxes(title_text="Signal Value", secondary_y=True, showgrid=False) 
@@ -683,7 +686,7 @@ def plot_hedge_ratio(hedge_series):
     fig.update_layout(
         title={'text': "<b>Hedge Ratio Evolution</b><br><span style='font-size:12px'>Intensity of Portfolio Protection (Absolute %)</span>", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
         xaxis_title="Date", yaxis_title="Hedge Intensity (%)", yaxis=dict(tickformat=".0%", range=[0, 1.1]), 
-        template="plotly_white", margin=dict(l=40, r=40, t=80, b=40)
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", margin=dict(l=40, r=40, t=80, b=40)
     )
     return fig
 
@@ -711,9 +714,9 @@ def plot_hedge_impact(hedge_series, market_df):
 
     fig.update_layout(
         title={'text': "<b>Cumulative Hedge Impact</b><br><span style='font-size:12px'>Cost or Gain generated by the Short Position</span>", 'y':0.9, 'x':0.5, 'xanchor': 'center'},
-        xaxis_title="Date", yaxis_title="Cumulative Return", yaxis=dict(tickformat=".1%"), template="plotly_white", margin=dict(l=40, r=40, t=80, b=40)
+        xaxis_title="Date", yaxis_title="Cumulative Return", yaxis=dict(tickformat=".1%"), template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white", margin=dict(l=40, r=40, t=80, b=40)
     )
-    fig.add_hline(y=0, line_width=1, line_color="black", opacity=0.5, line_dash="dash")
+    fig.add_hline(y=0, line_width=1, line_color="white" if st.session_state.get("theme", "dark") == "dark" else "black", opacity=0.5, line_dash="dash")
     
     return fig
 

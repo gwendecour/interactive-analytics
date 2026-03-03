@@ -38,7 +38,7 @@ if language == "English":
 
         While I am at the beginning of my professional journey in this industry, I have chosen to be fiercely proactive. I built this portfolio to demonstrate that I do not just stick to academic theory: I write code, I backtest models, and I solve concrete financial problems.
 
-        My ambition is clear: to train myself through hands-on practice so that I am fully operational from day one of my first internship, whether it involves pricing complex derivatives, developing execution algorithms, or supporting a trading desk.
+        My ambition is to train myself through hands-on practice so that I am fully operational from day one of my first internship, whether it involves pricing complex derivatives, developing execution algorithms, or supporting a trading desk.
 
         Let's connect:
 
@@ -75,7 +75,7 @@ else:
 
         Bien que je sois au début de mon parcours professionnel dans ce secteur, j'ai choisi d'être résolument proactif. J'ai conçu ce portfolio pour démontrer que je ne me limite pas à la théorie académique : je code, je backteste des modèles et je résous des problèmes financiers concrets.
 
-        Mon ambition est claire : me former par la pratique afin d'être pleinement opérationnel dès le premier jour de mon stage, que ce soit pour pricer des produits dérivés complexes, développer des algorithmes d'exécution ou accompagner un desk de trading.
+        Mon ambition est de me former par la pratique afin d'être pleinement opérationnel dès le premier jour de mon stage, que ce soit pour pricer des produits dérivés complexes, développer des algorithmes d'exécution ou accompagner un desk de trading.
 
         Contacts :
         Email : gwendal.decourchelle@edhec.com

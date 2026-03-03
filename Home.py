@@ -12,70 +12,100 @@ st.set_page_config(
 # --- HEADER IMPORT ---
 render_header()
 
-# --- CUSTOM CSS (FONT & DUAL STYLE BUTTONS) ---
-st.markdown("""
+# --- DYNAMIC THEME CSS ---
+theme = st.session_state.get('theme', 'dark')
+
+# Define theme colors
+if theme == 'dark':
+    bg_color = "#0e1117"
+    text_color = "#e0e0e0"
+    header_color = "#ffffff"
+    card_bg = "#161a22"
+    card_border = "#333333"
+    btn_sec_bg = "#262730"
+    btn_sec_text = "#fafafa"
+    btn_sec_border = "#4a4a4a"
+    btn_sec_hover_bg = "#3b3d4a"
+    btn_sec_hover_border = "#707070"
+    btn_sec_hover_text = "#ffffff"
+else:
+    bg_color = "#ffffff"
+    text_color = "#4a4a4a"
+    header_color = "#1a1a1a"
+    card_bg = "#ffffff"
+    card_border = "#f0f0f0"
+    btn_sec_bg = "#f0f2f6"
+    btn_sec_text = "#31333F"
+    btn_sec_border = "#d0d0d0"
+    btn_sec_hover_bg = "#e0e2e6"
+    btn_sec_hover_border = "#b0b0b0"
+    btn_sec_hover_text = "#000000"
+
+st.markdown(f"""
 <style>
     /* Import 'Lora' font (Academic/Finance style) */
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;600&display=swap');
 
     /* Apply font to headers */
-    h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {{
         font-family: 'Lora', serif !important;
-        color: #1a1a1a;
-    }
+        color: {header_color};
+    }}
     
     /* Apply clean font to text */
-    p, .stMarkdown, .stText {
+    p, .stMarkdown, .stText {{
         font-family: 'Inter', sans-serif !important;
-        color: #4a4a4a;
+        color: {text_color};
         line-height: 1.6;
-    }
+    }}
 
     /* --- BUTTON STYLES --- */
     
     /* 1. "EXPLORE" Buttons (Primary Type) -> FINANCE GREEN + WHITE TEXT */
     div.stButton > button[kind="primary"],
-    div.stButton > button[kind="primary"] * {
+    div.stButton > button[kind="primary"] * {{
         background-color: #2e7d32 !important; 
         color: #ffffff !important;            /* FORCE WHITE GLOBALLY */
         fill: #ffffff !important;             /* FORCE WHITE FOR ICONS IF PRESENT */
         border: none !important;
-    }
+    }}
 
     /* Hover State Management */
     div.stButton > button[kind="primary"]:hover,
-    div.stButton > button[kind="primary"]:hover * {
+    div.stButton > button[kind="primary"]:hover * {{
         background-color: #1b5e20 !important;
         color: #ffffff !important;
-    }
+    }}
     
     /* Force white color even if button is active/clicked */
     div.stButton > button[kind="primary"]:active, 
-    div.stButton > button[kind="primary"]:focus {
+    div.stButton > button[kind="primary"]:focus {{
         color: #ffffff !important;
         background-color: #1b5e20 !important;
-    }
+    }}
 
-    /* 2. "METHODOLOGY" Buttons (Secondary/Default Type) -> LIGHT GREY */
-    div.stButton > button[kind="secondary"] {
-        background-color: #f0f2f6 !important; /* Light Grey */
-        color: #31333F !important;            /* Black/Dark Grey */
-        border: 1px solid #d0d0d0 !important;
+    /* 2. "METHODOLOGY" Buttons (Secondary/Default Type) */
+    div.stButton > button[kind="secondary"] {{
+        background-color: {btn_sec_bg} !important;
+        color: {btn_sec_text} !important;
+        border: 1px solid {btn_sec_border} !important;
         font-weight: 500 !important;
         border-radius: 6px;
         transition: all 0.2s ease;
-    }
-    div.stButton > button[kind="secondary"]:hover {
-        background-color: #e0e2e6 !important;
-        border-color: #b0b0b0 !important;
-        color: black !important;
-    }
+    }}
+    div.stButton > button[kind="secondary"]:hover {{
+        background-color: {btn_sec_hover_bg} !important;
+        border-color: {btn_sec_hover_border} !important;
+        color: {btn_sec_hover_text} !important;
+    }}
     
     /* Card Styles (Containers) */
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
-        background-color: white;
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {{
+        background-color: {card_bg};
         padding-bottom: 10px;
-    }
+        border-radius: 8px;
+        border: 1px solid {card_border};
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -171,20 +201,48 @@ $$
 * **Skewness:** Targeting positive skewness (limiting tail risk).
 """
 
-story_p3 = """
-### Business Problem
-In asset management (e.g., Corporate Bonds), missing data is common. Simply filling gaps with the last known price (Forward Fill) biases volatility downwards and underestimates risk.
+story_p3 = r"""
+### Strategic Objective
+In quantitative asset management, optimizing a portfolio relies heavily on the **Covariance Matrix** ($\Sigma$) of asset returns. However, financial datasets are rarely perfect. Illiquid assets (like Corporate Bonds or Small Cap Equities) frequently suffer from **missing data** (stale prices or non-trading days). 
+The objective of this research module is to demonstrate how naive imputation methods mathematically destroy the covariance structure and lead to suboptimal, risky allocations, and to compare advanced algorithmic methods that recover the true hidden market dynamics.
 
-### Comparison Arsenal
-I compare 5 mathematical methods to recover missing data:
-1.  **Baseline:** Forward Fill (The flaw to expose).
-2.  **KNN Imputer:** K-Nearest Neighbors based on asset correlation.
-3.  **MICE:** Multivariate Imputation by Chained Equations.
-4.  **SVD:** Matrix completion assuming low-rank market structure.
-5.  **EM Algorithm:** Statistical likelihood maximization.
+### The Dangers of Naive Imputation (Forward Fill)
+The industry standard often defaults to **Forward Fill** (carrying the last known price forward). While simple, it severely distorts the statistical properties of the asset:
+*   **Volatility Collapse:** Since the price doesn't change on missing days, $R_t = \ln(P_t/P_{t-1}) \approx 0$. This artificially deflates the asset's standard deviation ($\sigma$).
+*   **Covariance Destruction:** Returns of the illiquid asset become $0$ exactly when the broader market is moving, destroying the cross-asset correlation:
+    $$ Cov(R_{illiquid}, R_{market}) \to 0 $$
+*   **Portfolio Illusion:** Mean-Variance optimizers love low-volatility, uncorrelated assets. The optimizer will massively overweight the illiquid asset, mistakenly believing it to be a perfect "safe haven," exposing the fund to massive hidden risk (Volatility Illusion).
 
-### Success Metrics
-Evaluation using **Frobenius Norm** (distance to Ground Truth) and impact on **Minimum Variance Portfolios**.
+### Advanced Imputation Methodologies
+To properly recover the covariance matrix, we explore and compare four algorithmic approaches:
+
+#### 1. K-Nearest Neighbors (KNN)
+KNN relies on cross-sectional similarity. For a missing return on day $t$ for asset $i$, it identifies the $K$ "closest" assets (based on historical correlation) that *do* have data on day $t$.
+$$ \hat{R}_{i,t} = \sum_{j \in K} w_j R_{j,t} \quad \text{where } w_j \propto \text{Similarity}(i, j) $$
+*   **Pros:** Preserves cross-asset correlations well.
+*   **Cons:** Struggles if the entire market segment is illiquid simultaneously.
+
+#### 2. Singular Value Decomposition (SVD)
+Financial markets are governed by a few dominant latent factors (e.g., Market, Sector, Duration). SVD exploits this low-rank structure via **Matrix Completion**.
+The returns matrix $M$ is decomposed into $M \approx U \Sigma V^T$. The missing entries are iteratively updated using a truncated SVD (keeping only the top $k$ principal components).
+*   **Pros:** Extremely powerful in capturing the macro "Market Beta" effect to fill the gaps.
+
+#### 3. Multivariate Imputation by Chained Equations (MICE)
+Originally from medical statistics, MICE is an iterative regression technique. It models each asset as a linear combination of all other assets.
+$$ \hat{R}_{i,t} = \beta_0 + \beta_1 R_{1,t} + \beta_2 R_{2,t} + \dots + \beta_n R_{n,t} $$
+It loops through all incomplete assets, updating their missing values conditionally based on the current best guesses of the other assets, until convergence.
+
+#### 4. Expectation-Maximization (EM) Algorithm
+The EM algorithm explicitly models the returns as drawn from a Multivariate Normal Distribution $N(\mu, \Sigma)$. It alternates between two steps until maximum likelihood is achieved:
+*   **E-Step (Expectation):** Estimates the missing data given the observed data and current estimates of $\mu$ and $\Sigma$.
+*   **M-Step (Maximization):** Recalculates $\mu$ and $\Sigma$ using the complete dataset (observed + expected).
+*   **Pros:** Mathematically rigorous for estimating the Covariance Matrix directly.
+
+### Performance Evaluation
+The robustness of each method is evaluated both statistically and financially:
+*   **Statistical Error (Frobenius Norm):** Measures the absolute distance between the recovered covariance matrix $\hat{\Sigma}$ and the Ground Truth $\Sigma_{true}$:
+    $$ ||\Sigma_{true} - \hat{\Sigma}||_F = \sqrt{\sum_i \sum_j (\Sigma_{true, i,j} - \hat{\Sigma}_{i,j})^2} $$
+*   **Financial Impact:** We simulate an Inverse Volatility (Risk Parity) portfolio using the distorted data and compare its **Tracking Error** and **Turnover Friction** against the theoretical optimal portfolio.
 """
 
 # ==============================================================================
@@ -207,7 +265,7 @@ st.markdown("<h1 style='text-align: center; margin-bottom: 10px;'>Choose Your Pr
 # --- DYNAMIC SUBTITLE ---
 st.markdown(
     "<p style='text-align: center; margin-bottom: 50px; color: gray; font-size: 1.1rem;'>"
-    "Every project is designed as an interactive educational experience: complex analytics are thoroughly explained in plain English, while intelligent caching and background pre-computation ensure a seamless, lightning-fast exploration."
+    "Every project is designed as an interactive educational experience: complex analytics are thoroughly explained in plain English, while intelligent caching and background pre-computation ensure a comfortable exploration."
     "</p>", 
     unsafe_allow_html=True
 )
@@ -278,3 +336,15 @@ with col3:
         with b_col2:
             if st.button("Methodology", key="story_p3", use_container_width=True):
                 show_methodology("Robust Covariance Estimation (In Dev)", story_p3)
+
+# --- DISCLAIMER ---
+st.divider()
+st.markdown(
+    "<div style='text-align: center; color: #888888; font-size: 0.9em; padding: 20px;'>"
+    "<i><b>Disclaimer:</b> This platform is an independent, non-professional research environment developed for educational and experimental purposes. "
+    "While every effort is made to ensure the mathematical accuracy of the pricing engines and analytics, bugs or logic errors may occasionally occur. "
+    "If you spot any anomalies or have suggestions for improvement, please feel free to reach out. Constructive feedback is always welcome.</i><br>"
+    "<b>Contact:</b> <a href='mailto:gwendal.decourchelle@edhec.com' style='color:#a0a0a0;'>gwendal.decourchelle@edhec.com</a>"
+    "</div>",
+    unsafe_allow_html=True
+)

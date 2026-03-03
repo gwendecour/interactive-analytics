@@ -17,15 +17,12 @@ st.set_page_config(page_title="Investment Strategies", page_icon="assets/logo.pn
 render_header()
 
 st.title("Robust Covariance & Missing Data Imputation")
-with st.expander("Pourquoi ce projet ?"):
+with st.expander("The motivations behind this project"):
     st.markdown("""
     ### The Liquidity Illusion in Portfolio Engineering
-    In quantitative finance and systematic trading, missing data is unavoidable (non-synchronous trading, isolated holidays, micro-structure holes). 
-    The standard industry practice is to routinely **Forward-Fill** the last known price.
-    However, this artificially forces the realized volatility towards zero and silently destroys the global correlation structure.
+    In quantitative finance and systematic trading, missing data is unavoidable (non-synchronous trading, isolated holidays, micro-structure holes). The standard industry practice is to routinely **Forward-Fill** the last known price. However, this artificially forces the realized volatility towards zero and silently destroys the global correlation structure.
     
-    **The result?** The Minimum Variance Portfolio Optimizer will be actively misled into over-allocating to these "falsely stable" assets, generating a massive *Ex-Post Risk* that wasn't priced in. 
-    This dashboard compares advanced mathematical imputations (KNN, Matrix Reconstruction, Expectation-Maximization) against the naïve industry baseline.
+    As a result, a Minimum Variance Portfolio Optimizer will be actively misled into over-allocating to these "falsely stable" assets, generating a massive *Ex-Post Risk* that wasn't priced in. This dashboard precisely compares advanced mathematical imputations (KNN, Matrix Reconstruction, Expectation-Maximization) against the naïve industry baseline to resolve this hidden risk.
     """)
 
 # --- SIDEBAR CONFIGURATION ---
@@ -89,7 +86,7 @@ def get_models():
         "Expectation-Maximization": EMImputerModel(max_iter=50)
     }
 
-@st.cache_data(show_spinner="Phase 1: Running Core Imputation Engines...")
+@st.cache_data(show_spinner="Running Core Imputation Engines...")
 def compute_base_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method):
     gt_df = fetch_ground_truth(tickers_list, start, end)
     models = get_models()
@@ -115,7 +112,7 @@ def compute_base_metrics(tickers_list, start, end, target_tickers, miss_rate, m_
     
     return gt_df, corrupted_df_visual, true_cov, imputed_prices_df, imputed_covs, frob_distances, vis_col_name
 
-@st.cache_data(show_spinner="Phase 2A: Computing Phase Transition Margin...")
+@st.cache_data(show_spinner="Computing Phase Transition Margin...")
 def compute_phase_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method):
     gt_df = fetch_ground_truth(tickers_list, start, end)
     models = get_models()
@@ -138,7 +135,7 @@ def compute_phase_metrics(tickers_list, start, end, target_tickers, miss_rate, m
         
     return pd.DataFrame(phase_results)
 
-@st.cache_data(show_spinner="Phase 2B: Running Heavy Monte-Carlo Stability...")
+@st.cache_data(show_spinner="Running Heavy Monte-Carlo Stability...")
 def compute_stability_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method, mc_runs):
     gt_df = fetch_ground_truth(tickers_list, start, end)
     models = get_models()
@@ -158,7 +155,7 @@ def compute_stability_metrics(tickers_list, start, end, target_tickers, miss_rat
             
     return pd.DataFrame(mc_results)
 
-@st.cache_data(show_spinner="Phase 3: Solving Optimal Portfolio Allocations...")
+@st.cache_data(show_spinner="Solving Optimal Portfolio Allocations...")
 def compute_portfolio_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method, port_strategy):
     models = get_models()
     optimizer = PortfolioOptimizer()
@@ -201,16 +198,14 @@ if tickers and start_date < end_date:
         st.code(traceback.format_exc())
         st.stop()
         
-    # --- TABS DISPLAY ---
-    st.markdown("---")
-    tab_micro, tab_systemic, tab_convergence, tab_business = st.tabs([
+    selected_tab = st.radio("Navigation", [
         " 1. Microscopic Truth", 
         " 2. Systemic Structure", 
         " 3. Algorithmic Convergence", 
         " 4. Business Impact"
-    ])
+    ], horizontal=True, label_visibility="collapsed")
 
-with tab_micro:
+if selected_tab == " 1. Microscopic Truth":
     st.markdown(f"Focusing on **{vis_col_name}**. See how the models try to reconstruct missing data and its temporal impact.")
         
     st.markdown("Select Imputation Models to display:")
@@ -230,7 +225,7 @@ with tab_micro:
         st.plotly_chart(fig_ts, use_container_width=True)
         with st.expander("Understanding the Time Series Models"):
             st.write("""
-            **What to observe:** We have artificially masked segments of the data to simulate deep liquidity holes. Below is how the algorithms try to fill them:
+            **We have artificially masked segments of the data to simulate deep liquidity holes. Below is how the algorithms try to fill them:**
             * **Forward-Fill (FFill):** Extends the last known price forward, creating flat horizontal steps (forcing a sequence of 0% returns).
             * **K-Nearest Neighbors (KNN):** Searches historical data for the 'k' days where the rest of the market behaved most similarly to the blackout day, and averages their returns to infer the missing price.
             * **Matrix Completion (SVD):** Decomposes the market into systemic risk factors (eigenvectors). It reconstructs the missing price by assuming the asset's exposure to these macro factors remains constant during the blackout period.
@@ -247,14 +242,7 @@ with tab_micro:
             )
             st.plotly_chart(fig_roll, use_container_width=True)
             
-            st.dataframe(
-                stats_df,
-                column_config={
-                    "Mean Vol (bps)": st.column_config.NumberColumn(format="%.4f bps"),
-                    "Noise Std (bps)": st.column_config.NumberColumn(format="%.4f bps")
-                },  
-                use_container_width=True, hide_index=True
-            )
+            
             
             with st.expander("The Volatility Paradox"):
                 st.write("""
@@ -263,35 +251,49 @@ with tab_micro:
                 
                 Because statistical variance squares the returns ($R^2$), a single explosive 2.0% gap-up geometrically dominates four smooth 0.5% daily returns. 
                 As seen in the legend's Noise Standard Deviation ($\sigma$), this mathematical dynamic artificially inflates the sample variance, rendering the rolling volatility highly erratic, noisy, and utterly unreliable for risk management.
-                """)
+                """, 
+                st.dataframe(
+                stats_df,
+                column_config={
+                    "Mean Vol (bps)": st.column_config.NumberColumn(format="%.4f bps"),
+                    "Noise Std (bps)": st.column_config.NumberColumn(format="%.4f bps")
+                },  
+                use_container_width=True, hide_index=True)
+                )
                 
         with col_acf:
+            st.markdown(" ") 
+            acf_mode = st.radio("Display Mode", ["Standard ACF", "Absolute |ACF|"], horizontal=True, label_visibility="collapsed", key="acf_radio")
+            
             fig_acf = QuantAnalytics.plot_autocorrelation(
                 gt_df[vis_col_name],
                 {k: imputed_prices[k][vis_col_name] for k in selected_ts},
-                selected_ts, lags=15
+                selected_ts, lags=15, display_mode=acf_mode
             )
             st.plotly_chart(fig_acf, use_container_width=True)
             with st.expander("The Memory Effect (ACF)"):
                 st.write("""
-                **What to observe:** The Efficient Market Hypothesis states that past returns should not predict future returns (ACF $\\approx$ 0).
+                **The Efficient Market Hypothesis states that past returns should not predict future returns (ACF $\\approx$ 0).**
                 However, artificial imputation methods inject mathematical memory structural artifacts into the series:
                 * **FFill** forces chains of exact 0% returns, creating a lingering structural autocorrelation that violates white noise assumptions.
                 * Other methods can also introduce slight structural patterns due to linear interpolation approximations.
-                
-                *You can use the toggle button on the chart to switch to **Absolute |ACF|** to strictly visualize the magnitude of the deviation away from 0 for all methods.*
                 """)
         
     st.markdown("---")
     st.markdown("### Return Distribution Distortion (Macro Effect)")
-    single_model = st.selectbox("Select Model for Return Distribution", all_model_names, index=0)
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        single_model = st.selectbox("Select Model for Return Distribution", all_model_names, index=0, label_visibility="collapsed")
+    with c2:
+        dist_mode = st.radio("Display Mode", ["Histograms", "Smoothed Curves", "Both"], horizontal=True, label_visibility="collapsed", key="dist_radio")
+        
     fig_kde = QuantAnalytics.plot_returns_distribution(
-        gt_df[vis_col_name], imputed_prices[single_model][vis_col_name], single_model
+        gt_df[vis_col_name], imputed_prices[single_model][vis_col_name], single_model, display_mode=dist_mode
     )
     st.plotly_chart(fig_kde, use_container_width=True)
     with st.expander("Return Distribution Distortion"):
         st.write("""
-        **What to observe:** This curve plots the density of daily log-returns. A healthy asset typically forms a bell-shaped curve (normal-ish distribution).
+        **This curve plots the density of daily log-returns. A healthy asset typically forms a bell-shaped curve (normal-ish distribution).**
         
         **N.B.** Notice the massive, unnatural central spike precisely at **0.0%** for Forward-Fill. This corresponds exactly to the artificially flat days. 
         Furthermore, to computationally compensate for these 0s, the large 'catch-up' jumps push the outer edges of the distribution further away, artificially inflating the **Fat Tails** (kurtosis) of the asset. A robust imputation method restores the natural bell shape.
@@ -302,7 +304,7 @@ with tab_micro:
         compute_phase_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag)
         compute_stability_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, monte_carlo_runs)
         compute_portfolio_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, "Minimum Variance")
-with tab_systemic:
+if selected_tab == " 2. Systemic Structure":
     st.header("The Systemic Shock: Cross-Asset Relationships")
     st.markdown("Missing data breaks the co-movement matrix of the market. See how the structure is destroyed.")
         
@@ -316,7 +318,7 @@ with tab_systemic:
     st.plotly_chart(fig_hm, use_container_width=True)
     with st.expander("Covariance Error Heatmap"):
         st.write("""
-        **What to observe:** This heatmap shows the literal difference between the True Covariance Matrix and the Estimated one. 
+        **This heatmap shows the literal difference between the True Covariance Matrix and the Estimated one.** 
         Deep red or blue spots indicate that the algorithm has completely misunderstood the relationship between two specific assets. Forward-Fill typically destroys covariance because artificial 0-returns on one asset don't correlate with the moves of another.
         """)
     st.markdown("---")
@@ -336,19 +338,19 @@ with tab_systemic:
         st.plotly_chart(fig_scat2, use_container_width=True)
         with st.expander("Scatter Cross-Correlation & The Epps Effect"):
             st.write("""
-            **What to observe:** Perfect imputation aligns all dots on the black dashed `y=x` diagonal. 
+            **Perfect imputation aligns all dots on the black dashed `y=x` diagonal.**
             
             Notice how most imputation methods actually 'pull' or 'dampen' the pairwise correlations towards 0. This creates a flatter, horizontal cloud with a linear trendline Slope < 1. 
             This statistical phenomenon is known in quantitative finance as the **Epps Effect**. Forward-Fill is especially guilty of this correlation destruction, because the flat 0% flat-lines of one asset will mathematically fail to correlate with the active, daily movements of another.
             """)
                 
     # Smart background
-    with st.spinner("🚀 Advanced Analytics pre-computing in background..."):
+    with st.spinner("Advanced Analytics pre-computing in background..."):
         compute_phase_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag)
         compute_stability_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, monte_carlo_runs)
         compute_portfolio_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, "Minimum Variance")
 
-with tab_convergence:
+if selected_tab == " 3. Algorithmic Convergence":
     try:
         degradation_df = compute_phase_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag)
         stability_df = compute_stability_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, monte_carlo_runs)
@@ -387,7 +389,7 @@ with tab_convergence:
     with st.spinner("Resolving Optimal Portfolio structures in background..."):
         compute_portfolio_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, "Minimum Variance")
 
-with tab_business:
+if selected_tab == " 4. Business Impact":
     st.markdown("### Portfolio Specifications")
     portfolio_strategy = st.selectbox(
         "Select Portfolio Allocation Strategy:", 
@@ -424,7 +426,7 @@ with tab_business:
             st.plotly_chart(fig_turn, use_container_width=True)
             with st.expander("Turnover Friction Penalty"):
                 st.write("""
-                **What to observe:** This bar chart shows the total % of your capital that was allocated to the wrong assets. 
+                **This bar chart shows the total % of your capital that was allocated to the wrong assets.** 
                 A 20% turnover penalty means that 20% of your portfolio is invested differently than the optimal Ground Truth portfolio, exposing you to hidden risks and dead-weight trading transition costs.
                 
                 **N.B:** If you observe 0% turnover for all models, it means the corruption level is too low to force the algorithms into different allocations. Try increasing the **Missing Rate** in the sidebar.
@@ -436,7 +438,7 @@ with tab_business:
             st.plotly_chart(fig_illusion, use_container_width=True)
             with st.expander("The Volatility Illusion & Ex-Post Risk"):
                 st.write("""
-                **What to observe:** Models in the red 'Danger Zone' (above the dotted line) have a higher *real* risk than what they estimated *mathematically*. 
+                **Models in the red 'Danger Zone' (above the dotted line) have a higher *real* risk than what they estimated *mathematically*.** 
                 Forward-Fill often creates a massive illusion because it thinks the flat prices are risk-free. The bubble size represents the magnitude of this hidden risk.
                 """)
                 
@@ -463,7 +465,7 @@ with tab_business:
         st.plotly_chart(fig_pnl, use_container_width=True)
         with st.expander("Cumulative Tracking Error Penalty"):
             st.write("""
-            **What to observe:** It is possible for a badly allocated portfolio to get 'lucky' and make more money than the optimal one if it accidentally overweights an asset that happens to surge. However, in quantitative finance, we measure the **penalty of being wrong**. 
+            **It is possible for a badly allocated portfolio to get 'lucky' and make more money than the optimal one if it accidentally overweights an asset that happens to surge. However, in quantitative finance, we measure the penalty of being wrong.** 
             
             This chart plots the **Cumulative Squared Tracking Error**. The Optimal Ground Truth is exactly 0. You want an algorithm that stays as close to 0 as possible (a horizontal flat line).
             Notice how Forward-Fill drifts massively away, accumulating tracking error penalty over time because its weights are fundamentally wrong, translating into uncompensated risks.

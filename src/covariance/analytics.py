@@ -1,3 +1,4 @@
+import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -47,7 +48,7 @@ class QuantAnalytics:
         fig.add_trace(go.Scatter(
             x=corrupted_series.index, y=corrupted_series.values, 
             mode='markers+lines', name='Observed Data', 
-            line=dict(color='black', width=2)
+            line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=2)
         ))
         
         fig.update_layout(
@@ -55,13 +56,13 @@ class QuantAnalytics:
             xaxis_title="Date",
             yaxis_title="Price",
             hovermode="x unified",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=500
         )
         return fig
 
     @staticmethod
-    def plot_returns_distribution(true_prices: pd.Series, imputed_prices: pd.Series, model_name: str) -> go.Figure:
+    def plot_returns_distribution(true_prices: pd.Series, imputed_prices: pd.Series, model_name: str, display_mode="Histograms") -> go.Figure:
         """
         KDE/Histogram plot of daily log-returns to visualize the volatility collapse (spike at 0).
         """
@@ -70,18 +71,21 @@ class QuantAnalytics:
         
         fig = go.Figure()
 
+        show_hist = display_mode in ["Histograms", "Both"]
+        show_kde = display_mode in ["Smoothed Curves", "Both"]
+
         # True Returns
         fig.add_trace(go.Histogram(
             x=true_returns, histnorm='probability density', 
             name='True Returns', opacity=0.5, marker_color='grey',
-            nbinsx=150
+            nbinsx=150, visible=show_hist
         ))
         
         # Imputed Returns
         fig.add_trace(go.Histogram(
             x=imputed_returns, histnorm='probability density', 
             name=f'{model_name} Returns', opacity=0.5, marker_color='red',
-            nbinsx=150
+            nbinsx=150, visible=show_hist
         ))
         
         # Smoothed KDE Curves
@@ -92,12 +96,12 @@ class QuantAnalytics:
             
             fig.add_trace(go.Scatter(
                 x=x_grid, y=kde_true(x_grid), mode='lines', name='True KDE',
-                line=dict(color='black', width=2), visible=False
+                line=dict(color="white", width=2), visible=show_kde
             ))
             
             fig.add_trace(go.Scatter(
                 x=x_grid, y=kde_imp(x_grid), mode='lines', name=f'{model_name} KDE',
-                line=dict(color='darkred', width=2), visible=False
+                line=dict(color='darkred', width=2), visible=show_kde
             ))
         except np.linalg.LinAlgError:
             pass # Skip KDE if data is completely singular (e.g. all 0)
@@ -107,20 +111,8 @@ class QuantAnalytics:
             title=f"Return Distribution Distortion ({model_name})",
             xaxis_title="Daily Log-Returns",
             yaxis_title="Density",
-            template="plotly_white",
-            height=400,
-            updatemenus=[
-                dict(
-                    type="buttons",
-                    direction="right",
-                    x=1.0, y=1.15,
-                    buttons=list([
-                        dict(args=[{"visible": [True, True, False, False]}], label="Histograms", method="update"),
-                        dict(args=[{"visible": [False, False, True, True]}], label="Smoothed Curves", method="update"),
-                        dict(args=[{"visible": [True, True, True, True]}], label="Both", method="update")
-                    ]),
-                )
-            ]
+            template="plotly_dark",
+            height=400
         )
         return fig
 
@@ -138,7 +130,7 @@ class QuantAnalytics:
             x=diff_matrix.columns, 
             y=diff_matrix.index,
             text_auto='.4f', 
-            color_continuous_scale='Reds',
+            color_continuous_scale=[[0, "#222222" if st.session_state.get("theme", "dark") == "dark" else "white"], [1, "red"]],
             zmin=0, zmax=max_err
         )
         
@@ -173,7 +165,7 @@ class QuantAnalytics:
             yaxis_title="Covariance Error (Frobenius Norm)",
             xaxis_tickformat='%',
             hovermode="x unified",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=500
         )
         return fig
@@ -201,7 +193,7 @@ class QuantAnalytics:
             title="Algorithm Convergence Variance (Monte Carlo runs)",
             yaxis_title="Covariance Error (Frobenius Norm)",
             xaxis_title="Imputation Model",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             showlegend=False,
             height=500
         )
@@ -221,7 +213,7 @@ class QuantAnalytics:
             name='Ideal Portfolio (Ground Truth)',
             x=tickers,
             y=true_weights.values,
-            marker_color='black'
+            marker_color="white" if st.session_state.get("theme", "dark") == "dark" else "black"
         ))
         
         # Add Each Selected Imputed Portfolio
@@ -241,7 +233,7 @@ class QuantAnalytics:
             xaxis_title="Assets",
             yaxis_title="Allocation Weight",
             yaxis_tickformat='.1%',
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=400
         )
         return fig
@@ -267,14 +259,14 @@ class QuantAnalytics:
         fig.add_trace(go.Scatter(
             x=[min_vol, max_vol], y=[min_vol, max_vol],
             mode='lines', name='Perfect Estimation (x=y)',
-            line=dict(color='black', dash='dash')
+            line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", dash='dash')
         ))
 
         # Ground Truth Marker
         fig.add_trace(go.Scatter(
             x=[true_vol], y=[true_vol],
             mode='markers', name='Ideal Portfolio',
-            marker=dict(color='black', size=15, symbol='star'),
+            marker=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", size=15, symbol='star'),
             hovertemplate="Truth<br>Ex-Ante: %{x:.2%}<br>Ex-Post: %{y:.2%}<extra></extra>"
         ))
         
@@ -301,7 +293,7 @@ class QuantAnalytics:
             xaxis_title="Estimated Volatility (Ex-Ante) -> The model's promise",
             yaxis_title="Real Volatility (Ex-Post) -> What you actually pay",
             xaxis_tickformat='.2%', yaxis_tickformat='.2%',
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=500,
             xaxis=dict(range=[min_vol, max_vol]),
             yaxis=dict(range=[min_vol, max_vol])
@@ -345,7 +337,7 @@ class QuantAnalytics:
         fig.add_trace(go.Scatter(
             x=true_roll_vol.index, y=true_roll_vol.values,
             mode='lines', name='Ground Truth',
-            line=dict(color='black', width=3, dash='dash')
+            line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=3, dash='dash')
         ))
         
         colors = px.colors.qualitative.Plotly
@@ -372,7 +364,7 @@ class QuantAnalytics:
             yaxis_title="Volatility",
             yaxis_tickformat='.1%',
             hovermode="x unified",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=400,
             legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
         )
@@ -381,11 +373,14 @@ class QuantAnalytics:
         return fig, stats_df
 
     @staticmethod
-    def plot_autocorrelation(true_prices: pd.Series, imputed_prices_dict: dict[str, pd.Series], selected_models: list[str], lags: int = 20) -> go.Figure:
+    def plot_autocorrelation(true_prices: pd.Series, imputed_prices_dict: dict[str, pd.Series], selected_models: list[str], lags: int = 20, display_mode="Standard ACF") -> go.Figure:
         """
         Plots the AutoCorrelation Function (ACF) to show how FFill creates artificial memory (violating Efficient Market Hypothesis).
         """
         fig = go.Figure()
+        
+        show_std = display_mode == "Standard ACF"
+        show_abs = display_mode == "Absolute |ACF|"
         
         true_returns = np.log(true_prices / true_prices.shift(1)).dropna()
         acf_true = [true_returns.autocorr(lag=i) for i in range(1, lags + 1)]
@@ -394,18 +389,15 @@ class QuantAnalytics:
         fig.add_trace(go.Scatter(
             x=list(range(1, lags + 1)), y=acf_true,
             mode='lines+markers', name='Ground Truth',
-            line=dict(color='black', width=3, dash='dash')
+            line=dict(color="white", width=3, dash='dash'), visible=show_std
         ))
         fig.add_trace(go.Scatter(
             x=list(range(1, lags + 1)), y=acf_true_abs,
             mode='lines+markers', name='Ground Truth',
-            line=dict(color='black', width=3, dash='dash'), visible=False
+            line=dict(color="white", width=3, dash='dash'), visible=show_abs
         ))
         
         colors = px.colors.qualitative.Plotly
-        
-        vis_std = [True, False]
-        vis_abs = [False, True]
         
         for i, model_name in enumerate(selected_models):
             if model_name in imputed_prices_dict:
@@ -418,34 +410,23 @@ class QuantAnalytics:
                     x=list(range(1, lags + 1)), y=acf_imp,
                     mode='lines+markers', name=model_name,
                     line=dict(color=colors[i % len(colors)], width=2),
-                    opacity=0.8
+                    opacity=0.8, visible=show_std
                 ))
                 fig.add_trace(go.Scatter(
                     x=list(range(1, lags + 1)), y=acf_imp_abs,
                     mode='lines+markers', name=model_name,
                     line=dict(color=colors[i % len(colors)], width=2),
-                    opacity=0.8, visible=False
+                    opacity=0.8, visible=show_abs
                 ))
-                vis_std.extend([True, False])
-                vis_abs.extend([False, True])
+                
+        y_title = "Absolute Autocorrelation |ACF|" if show_abs else "Autocorrelation Coefficient"
                 
         fig.update_layout(
             title="Return Autocorrelation (ACF) - Memory Effect Test",
             xaxis_title="Lag (Days)",
-            yaxis_title="Autocorrelation Coefficient",
-            template="plotly_white",
-            height=400,
-            updatemenus=[
-                dict(
-                    type="buttons",
-                    direction="right",
-                    x=1.0, y=1.15,
-                    buttons=list([
-                        dict(args=[{"visible": vis_std}], label="Standard ACF", method="update"),
-                        dict(args=[{"visible": vis_abs}, {"yaxis.title": "Absolute Autocorrelation |ACF|"}], label="Absolute |ACF|", method="update")
-                    ]),
-                )
-            ]
+            yaxis_title=y_title,
+            template="plotly_dark",
+            height=400
         )
         return fig
 
@@ -465,7 +446,7 @@ class QuantAnalytics:
         fig.add_trace(go.Scatter(
             x=[-1, 1], y=[-1, 1],
             mode='lines', name='Perfect Alignment (y=x)',
-            line=dict(color='black', dash='dash')
+            line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", dash='dash')
         ))
         
         colors = px.colors.qualitative.Plotly
@@ -496,7 +477,7 @@ class QuantAnalytics:
             title="Cross-Correlation Structure Preservation & Trendlines (Epps Effect)",
             xaxis_title="True Cross-Correlation (Ground Truth)",
             yaxis_title="Imputed Cross-Correlation",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=500,
             xaxis=dict(range=[-1.1, 1.1]),
             yaxis=dict(range=[-1.1, 1.1])
@@ -519,7 +500,7 @@ class QuantAnalytics:
             title=title,
             xaxis_title="Assets",
             yaxis_title="Distance",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=400
         )
         return fig
@@ -540,7 +521,7 @@ class QuantAnalytics:
         fig.add_trace(go.Scatter(
             x=true_port_ret.index, y=np.zeros(len(true_port_ret)),
             mode='lines', name='Ideal Portfolio (Ground Truth)',
-            line=dict(color='black', width=3, dash='dash')
+            line=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "black", width=3, dash='dash')
         ))
         
         colors = px.colors.qualitative.Plotly
@@ -565,7 +546,7 @@ class QuantAnalytics:
             xaxis_title="Date",
             yaxis_title="Cumulative Squared Error Penalty",
             hovermode="x unified",
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=500
         )
         return fig
@@ -604,7 +585,7 @@ class QuantAnalytics:
             xaxis_title="Model",
             yaxis_title="Excess Turnover (%) vs Ideal",
             yaxis_tickformat='.1%',
-            template="plotly_white",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
             height=400
         )
         return fig

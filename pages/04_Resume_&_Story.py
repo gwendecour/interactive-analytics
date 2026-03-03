@@ -36,7 +36,7 @@ if language == "English":
 
         This background allows me to bridge the gap between advanced quantitative rigor and the economic realities of the business. I have a strong, driven interest in **Market Finance**, specifically aiming for roles in **Trading**, **Algorithmic Trading**, or **Quantitative Analysis**. My goal is to deeply understand market dynamics, leverage complex data, and translate mathematical models into actionable strategies.
 
-        While I am at the beginning of my professional journey in this industry, I have chosen to be fiercely proactive. I built this portfolio to demonstrate that I do not just stick to academic theory: I write code, I backtest models, and I solve concrete financial problems.
+        While I am at the beginning of my professional journey in this industry, I have chosen to be proactive. I built this portfolio to demonstrate that I do not just stick to academic theory: I write code, I backtest models, and I solve concrete financial problems.
 
         My ambition is to train myself through hands-on practice so that I am fully operational from day one of my first internship, whether it involves pricing complex derivatives, developing execution algorithms, or supporting a trading desk.
 

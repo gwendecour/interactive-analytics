@@ -253,7 +253,7 @@ def show_methodology(title, content):
     st.markdown(f"## {title}")
     st.markdown(content)
     st.markdown("---")
-    st.caption("Decourchelle Quant Lab Research")
+    st.caption("Interactive Analytics")
 
 # ==============================================================================
 # PAGE LAYOUT
@@ -265,7 +265,7 @@ st.markdown("<h1 style='text-align: center; margin-bottom: 10px;'>Choose Your Pr
 # --- DYNAMIC SUBTITLE ---
 st.markdown(
     "<p style='text-align: center; margin-bottom: 50px; color: gray; font-size: 1.1rem;'>"
-    "Every project is designed as an interactive educational experience: complex analytics are thoroughly explained in plain English, while intelligent caching and background pre-computation ensure a comfortable exploration."
+    "Every project is designed as an interactive educational experience: complex analytics are thoroughly explained, while intelligent caching and background pre-computation ensure a comfortable exploration."
     "</p>", 
     unsafe_allow_html=True
 )
@@ -335,7 +335,7 @@ with col3:
                 st.switch_page("pages/03_Robust_Covariance.py")
         with b_col2:
             if st.button("Methodology", key="story_p3", use_container_width=True):
-                show_methodology("Robust Covariance Estimation (In Dev)", story_p3)
+                show_methodology("Robust Covariance Estimation", story_p3)
 
 # --- DISCLAIMER ---
 st.divider()

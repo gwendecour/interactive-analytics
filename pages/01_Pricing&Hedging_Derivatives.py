@@ -324,15 +324,22 @@ with st.container(border=True):
     c1, c2, c3, c4 = st.columns([1.5, 1.5, 1.5, 4])
     
     with c1:
+        def format_ticker(x):
+            if x == "CUSTOM":
+                return f"{x} - Manual Override"
+            return f"{x} - {TICKERS[x]}"
+
         selected_ticker = st.selectbox(
             "Ticker", 
             options=list(TICKERS.keys()), 
             index=None, 
             placeholder="Select Ticker...", 
-            format_func=lambda x: f"{x} - {TICKERS[x]}", 
+            format_func=format_ticker, 
             key="ticker_input",
             label_visibility="collapsed"
         )
+        if selected_ticker == "CUSTOM":
+            st.markdown("<div style='color: #ffaa00; font-size: 0.85em; font-weight: 600; margin-top: -5px;'>⚠️ Custom Values Loaded</div>", unsafe_allow_html=True)
         
     with c2:
         selected_product = st.selectbox(
@@ -675,10 +682,10 @@ elif selected_tab == "Greeks & Heatmaps":
         # Slider / Box Display
         c_sim1, c_sim2 = st.columns([3, 1])
         with c_sim1:
-            st.slider("Spot Range", 0.0, max_spot, value=float(st.session_state.gk_slider_spot), key="gk_slider_spot", 
+            st.slider("Spot Range", 0.0, max_spot, key="gk_slider_spot", 
                       on_change=update_slider, label_visibility="collapsed")
         with c_sim2:
-            st.number_input("Spot", 0.0, max_spot, value=float(st.session_state.gk_box_spot), key="gk_box_spot", 
+            st.number_input("Spot", 0.0, max_spot, key="gk_box_spot", 
                             on_change=update_box, label_visibility="collapsed")
         
         # DYNAMIC Variable for calculation
@@ -694,7 +701,7 @@ elif selected_tab == "Greeks & Heatmaps":
         # Slider Display (No box to keep it simple as user requested originally, or add the box? "je veux aussi une petite box a coté")
         # Wait, the user ONLY wanted the caption! "je veux donc aussi une petite box à coté "Simulated Vol : xx,xx (+0.00%)"."
         # The user meant the caption. But let's restore just the slider as the user pasted it.
-        st.slider("Volatility (%)", 1.0, 100.0, value=float(st.session_state.gk_vol_slider), key="gk_vol_slider")
+        st.slider("Volatility (%)", 1.0, 100.0, key="gk_vol_slider")
         
         # DYNAMIC Variable for calculation
         dyn_vol_pct = st.session_state.gk_vol_slider 

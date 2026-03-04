@@ -68,40 +68,77 @@ st.markdown("""
 # --- CONTROL BOX (TOP CONTAINER) ---
 with st.container(border=True):
     st.markdown("Backtest Configuration")
-
-    col1, col2 = st.columns([5, 1])
-    
-    with col1:
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.caption("Universe Preset")
-            selected_preset = st.selectbox("Universe Preset", options=["Standard (12)", "Large (24)", "No Commodities", "Global Macro (Max)"], index=0, label_visibility="collapsed", key="univ_input")
-        with c2:
-            st.caption("Benchmark to Beat")
-            selected_benchmark = st.selectbox("Benchmark", options=["SPY (S&P 500)", "Risk Parity (Multi-Asset)"], index=0, label_visibility="collapsed", key="bench_input")
-        with c3:
-            st.caption("Start Date")
-            start_date = st.date_input("Start", value=datetime.date(2022, 1, 1), label_visibility="collapsed", key="start_date_input")
-        with c4:
-            freq_map = {"ME": "Monthly", "W-FRI": "Weekly (Fri)", "QE": "Quarterly"}
-            st.caption("Rebalance Freq")
-            rebal_freq = st.selectbox("Freq", options=list(freq_map.keys()), format_func=lambda x: freq_map.get(x, x), index=0, label_visibility="collapsed")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.caption("Benchmark to Beat")
+        selected_benchmark = st.selectbox("Benchmark", options=["SPY (S&P 500)", "Risk Parity (Multi-Asset)"], index=1, label_visibility="collapsed", key="bench_input")
+    with c2:
+        st.caption("Start Date")
+        start_date = st.date_input("Start", value=datetime.date(2022, 1, 1), label_visibility="collapsed", key="start_date_input")
+    with c3:
+        freq_map = {"ME": "Monthly", "W-FRI": "Weekly (Fri)", "QE": "Quarterly"}
+        st.caption("Rebalance Freq")
+        rebal_freq = st.selectbox("Freq", options=list(freq_map.keys()), format_func=lambda x: freq_map.get(x, x), index=0, label_visibility="collapsed")
         
-        c5, c6, c7 = st.columns([1,2,1])
-        with c5:
-            st.caption("Signal Method")
-            selected_signal = st.selectbox("Signal", options=["z_score", "rsi", "distance_ma"], format_func=lambda x: x.replace("_", " ").upper(), index=0, label_visibility="collapsed", key="signal_input")
-        with c6:
-            st.caption("Max Correlation Threshold")
-            corr_limit = st.slider("Correlation Threshold", min_value=0.5, max_value=0.99, value=st.session_state.shared_corr_threshold, step=0.05, label_visibility="collapsed",key="slider_top_key", on_change=update_corr_from_top, help="Assets with correlation higher than this will be skipped during selection.")
-        with c7:
-            st.caption("Top N (per Class)")
-            top_n = st.number_input("Top N", min_value=1, max_value=5, value=2, label_visibility="collapsed", key="top_n_input")
+    c4, c5, c6 = st.columns(3)
+    with c4:
+        st.caption("Signal Method")
+        selected_signal = st.selectbox("Signal", options=["z_score", "rsi", "distance_ma"], format_func=lambda x: x.replace("_", " ").upper(), index=0, label_visibility="collapsed", key="signal_input", help="Select the signal method to use for generating trading signals.")
+    with c5:
+        st.caption("Max Correlation Threshold")
+        corr_limit = st.slider("Correlation Threshold", min_value=0.5, max_value=0.99, step=0.05, label_visibility="collapsed",key="slider_top_key", on_change=update_corr_from_top, help="Assets with correlation higher than this will be skipped during selection.")
+    with c6:
+        st.caption("Top N (per Class)")
+        top_n = st.number_input("Top N", min_value=1, max_value=5, value=2, label_visibility="collapsed", key="top_n_input")
+            
+    # --- SIMPLE PRE-SELECTION ---
+    all_classes = list(ASSET_POOLS.keys())
+    desired_defaults = ['Equities US', 'Bonds', 'Commodities']
+    default_classes = [c for c in desired_defaults if c in all_classes]
     
-    with col2:
-        st.caption("&nbsp;")
+    st.markdown("### Investment Universe")
+    selected_classes = st.multiselect("Select High-Level Asset Classes", options=all_classes, default=default_classes, help="Select which broad categories of assets to include. Pre-selecting Equities, Bonds, and Commodities builds a classic balanced portfolio.")
+    
+    universe_dict = {}
+    
+    if selected_classes:
+        # Initialize dictionary with all tickers from selected classes up to 10 by default to save processing time
+        for c_name in selected_classes:
+            universe_dict[c_name] = ASSET_POOLS[c_name][:10]
+            
+        with st.expander("Advanced Customization (Select Specific Assets)", expanded=False):
+            st.caption("Refine individual selections per class. If you leave a category empty here, it will be skipped entirely.")
+            
+            # Create a dynamic number of columns based on selected classes
+            num_cols = len(selected_classes)
+            if num_cols > 0:
+                cols = st.columns(min(num_cols, 4)) # max 4 cols per row to avoid crowding
+                for idx, c_name in enumerate(selected_classes):
+                    col = cols[idx % 4]
+                    with col:
+                        available_tickers = ASSET_POOLS[c_name]
+                        selected_tickers = st.multiselect(
+                            f"{c_name} Assets",
+                            options=available_tickers,
+                            default=available_tickers[:10],
+                            format_func=get_asset_name,
+                            key=f"ms_univ_{c_name}"
+                        )
+                        # Overwrite with specific selection
+                        if selected_tickers:
+                            universe_dict[c_name] = selected_tickers
+                        else:
+                            # If they explicitly clear the box, remove the class from the dictionary
+                            if c_name in universe_dict:
+                                del universe_dict[c_name]
+
+    st.markdown("---")
+    # --- LAUNCH CONTROLS ---
+    col_run1, col_run2 = st.columns(2)
+    with col_run1:
+        use_hedge = st.toggle("Beta Hedge (Short SPY to offset continuous market risk)", value=True)
+    with col_run2:
         btn_run = st.button("RUN BACKTEST", use_container_width=True, type="primary")
-        use_hedge = st.toggle("Beta Hedge", value=True)
 
 # --- EXECUTION LOGIC ---
 if btn_run or st.session_state.run_trigger:
@@ -110,9 +147,12 @@ if btn_run or st.session_state.run_trigger:
     
     with st.spinner(f"Fetching Market Data & Running Simulation"):
         try:
-            # Universe Construction
-            # We fetch the nested dictionary of the selected preset (e.g., {'Actions': ['AAPL', 'MSFT'], ...})
-            universe_dict = get_universe(selected_preset)
+            # Universe Construction is now already handled in the expander UI
+            # We just use universe_dict which was built locally in this function
+            if not universe_dict:
+                st.error("Please select at least one asset in the Custom Universe Selection.")
+                st.stop()
+                
             # Flatten the dictionary values into a unique set of tickers to minimize API calls.
             # We explicitly add 'SPY' as it is required for Beta hedging and potential benchmark comparisons.
             all_tickers = list(set([t for sublist in universe_dict.values() for t in sublist] + ['SPY']))
@@ -191,7 +231,8 @@ if btn_run or st.session_state.run_trigger:
                 st.session_state.market_data = market_df 
 
                 st.session_state.params = {
-                    "univ": selected_preset,
+                    "univ": "Custom",
+                    "universe_dict": universe_dict,
                     "signal": selected_signal,
                     "hedge": use_hedge,
                     "top_n": top_n,
@@ -314,8 +355,13 @@ if selected_tab == " Asset Allocation":
         nav_series = results_dict['NAV']
         market_df = st.session_state.get('market_data', None)
         
-        univ_preset = st.session_state.params.get("univ", "Standard (12)")
-        universe_dict = get_universe(univ_preset)
+        univ_preset = st.session_state.params.get("univ", "Custom")
+        # To avoid failure if the user is looking at historical run:
+        if st.session_state.run_trigger or btn_run:
+            pass # We should be using the currently fetched one or storing it.
+        # Wait, if we use universe_dict later in tab 2... we need to save the universe_dict used in the run into session_state!
+        # Let's fix that below. For now, since Tab2 relies on the dictionary, we should pull it from session_state where we will save it.
+        universe_dict = st.session_state.params.get("universe_dict", ASSET_POOLS)
         
         # Historical Allocation Evolution (Area Chart)
         # Displays the continuous weight of each asset class over time.
@@ -481,19 +527,26 @@ if selected_tab == " Signals & Selection":
             st.markdown("---")
             st.subheader("Asset Class Analysis")
             
-            thresh = st.slider("Correlation Alert Threshold", min_value=0.5, max_value=0.99, step=0.05, value=st.session_state.shared_corr_threshold, key="slider_bottom_key", on_change=update_corr_from_bottom)
+            thresh = st.slider("Correlation Alert Threshold", min_value=0.5, max_value=0.99, step=0.05, key="slider_bottom_key", on_change=update_corr_from_bottom)
             current_thresh = st.session_state.shared_corr_threshold
 
-            tabs_classes = st.tabs(["All", "Actions", "Bonds", "Commodities"])
-            categories = {
-                "All":        lambda t: True,
-                "Actions":     lambda t: universe.get_asset_class(t) == "Actions",
-                "Bonds":       lambda t: universe.get_asset_class(t) == "Bonds",
-                "Commodities": lambda t: universe.get_asset_class(t) == "Commodities"
-            }
+            # Dynamically create tabs according to classes actually selected
+            all_classes_in_run = list(st.session_state.params.get("universe_dict", ASSET_POOLS).keys())
+            tabs_classes = st.tabs(["All"] + all_classes_in_run)
             
-            for tab, (cat_name, filter_func) in zip(tabs_classes, categories.items()):
+            # Use dynamic filters based on the explicit TICKER_TO_CATEGORY mapping
+            for idx, tab in enumerate(tabs_classes):
                 with tab:
+                    if idx == 0:
+                        cat_name = "All"
+                        filter_func = lambda t: True
+                    else:
+                        cat_name = all_classes_in_run[idx - 1]
+                        # Use default argument binding to prevent late-binding closure bugs
+                        def make_filter(c): 
+                            return lambda t: universe.get_asset_class(t) == c
+                        filter_func = make_filter(cat_name)
+                        
                     filtered_tickers = [t for t in full_ranking.index if filter_func(t)]
                     
                     if not filtered_tickers:

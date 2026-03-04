@@ -21,6 +21,9 @@ class BetaHedgeManager:
         Calculates the historical rolling beta of an asset relative to the benchmark.
         """
         try:
+            if self.benchmark_ticker not in self.returns.columns:
+                return 0.0
+                
             asset_rets = self.returns[ticker]
             bench_rets = self.returns[self.benchmark_ticker]
             
@@ -31,7 +34,7 @@ class BetaHedgeManager:
             return beta.iloc[-1]
         except Exception as e:
             logger.warning(f"Failed to calculate beta for {ticker}: {e}")
-            return 1.0 
+            return 0.0 
 
     def get_hedge_ratio(self, weights_dict, beta_window=60):
         """

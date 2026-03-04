@@ -3,56 +3,129 @@
 # ==============================================================================
 
 ASSET_DESCRIPTIONS = {
-    # US EQUITIES
-    'SPY': 'S&P 500 (US Large Cap)',
-    'QQQ': 'Nasdaq 100 (Tech)',
-    'IWM': 'Russell 2000 (Small Cap)',
-    'XLE': 'Energy Sector',
-    'XLF': 'Financials Sector',
-    'XLK': 'Technology Sector',
-    'XLV': 'Healthcare Sector',
-    'XLY': 'Consumer Discretionary',
-    'XLP': 'Consumer Staples',
-    'XLU': 'Utilities Sector',
-    'XLI': 'Industrials Sector',
-    'XLB': 'Materials Sector',
+    # US EQUITIES - Broad
+    'SPY': 'S&P 500 ETF', 'QQQ': 'Nasdaq 100 ETF', 'IWM': 'Russell 2000 ETF',
+    'DIA': 'Dow Jones Ind. ETF', 'VTI': 'Total Stock Market', 'VOO': 'S&P 500 (Vanguard)',
+    'IVV': 'S&P 500 (iShares)', 'RSP': 'S&P 500 Equal Weight',
+    
+    # US EQUITIES - Sectors
+    'XLE': 'Energy Sector', 'XLF': 'Financials Sector', 'XLK': 'Technology Sector',
+    'XLV': 'Healthcare Sector', 'XLY': 'Consumer Discretionary', 'XLP': 'Consumer Staples',
+    'XLU': 'Utilities Sector', 'XLI': 'Industrials Sector', 'XLB': 'Materials Sector',
+    'XLRE': 'Real Estate Sector', 'XLC': 'Communication Services',
+    
+    # US EQUITIES - Factors/Style
+    'MTUM': 'Momentum Factor ETF', 'VLUE': 'Value Factor ETF', 'QUAL': 'Quality Factor ETF',
+    'USMV': 'Min Volatility ETF', 'VIG': 'Dividend Appreciation', 'SCHD': 'US Dividend Equity',
+    'VYM': 'High Dividend Yield', 'SDY': 'S&P Dividend ETF', 'IWD': 'Russell 1000 Value',
+    'IWF': 'Russell 1000 Growth', 'IJR': 'Core S&P Small-Cap', 'IWC': 'Micro-Cap ETF',
 
     # INTERNATIONAL EQUITIES
-    'EFA': 'Dev. Markets (ex-US)',
-    'EEM': 'Emerging Markets',
-    'VGK': 'Europe Stocks',
-    'EWJ': 'Japan Stocks',
-    'MCHI': 'China Stocks',
-    'INDA': 'India Stocks',
+    'EFA': 'EAFE Developed Markets', 'VEA': 'Developed Markets ex-US', 'IEFA': 'Core EAFE',
+    'EEM': 'Emerging Markets', 'VWO': 'Emerging Markets', 'IEMG': 'Core Emerging Markets',
+    'VGK': 'Europe Stocks', 'EZU': 'Eurozone Stocks', 'EWJ': 'Japan Stocks',
+    'MCHI': 'China Stocks', 'INDA': 'India Stocks', 'EWZ': 'Brazil Stocks',
+    'EWT': 'Taiwan Stocks', 'EWY': 'South Korea Stocks', 'EWH': 'Hong Kong Stocks',
+    'EWC': 'Canada Stocks', 'EWA': 'Australia Stocks', 'EWL': 'Switzerland Stocks',
+    'EWG': 'Germany Stocks', 'EWQ': 'France Stocks', 'EWP': 'Spain Stocks',
+    'EWD': 'Sweden Stocks', 'EWW': 'Mexico Stocks', 'ECH': 'Chile Stocks',
+    'EPHE': 'Philippines Stocks', 'EIDO': 'Indonesia Stocks',
 
-    # FIXED INCOME & BONDS
-    'TLT': 'US Treasury 20y+ (Long)',
-    'IEF': 'US Treasury 7-10y (Mid)',
-    'SHY': 'US Treasury 1-3y (Short)',
-    'LQD': 'Corp Bonds (Inv. Grade)',
-    'HYG': 'Junk Bonds (High Yield)',
-    'BNDX': 'Intl Bonds (Hedged)',
-    'EMB': 'Emerging Bonds',
-    'TIP': 'TIPS (Inflation Protected)',
-    'AGG': 'US Aggregate Bond',
-    'MUB': 'Municipal Bonds',
+    # BONDS
+    'AGG': 'US Aggregate Bond', 'BND': 'Total Return Bond', 'TLT': 'US Treasury 20y+',
+    'IEF': 'US Treasury 7-10y', 'SHY': 'US Treasury 1-3y', 'GOVT': 'US Treasury Bonds',
+    'VGIT': 'Intermediate Treasury', 'VCIT': 'Intermediate Corporate', 'VCSH': 'Short-Term Corporate',
+    'LQD': 'Inv. Grade Corp Bonds', 'HYG': 'High Yield Corp Bonds', 'JNK': 'High Yield Bonds',
+    'USIG': 'Broad Inv. Grade', 'IGSB': 'Short-Term Inv. Grade', 'SJNK': 'Short-Term High Yield',
+    'BNDX': 'Intl Bonds (Hedged)', 'EMB': 'Emerging Markets Bonds (USD)', 'VWOB': 'Emerging Markets Bonds',
+    'PCY': 'Emerging Markets Sovereign', 'EBND': 'Local Currency EM Bonds', 'TIP': 'TIPS (Inflation Protected)',
+    'VTIP': 'Short-Term TIPS', 'MUB': 'National Muni Bond', 'MBB': 'Mortgage-Backed Bond',
+    'CWB': 'Convertible Bonds', 'FALN': 'Fallen Angels High Yield',
 
     # COMMODITIES
-    'GLD': 'Gold',
-    'SLV': 'Silver',
-    'USO': 'Oil (WTI Crude)',
-    'DBA': 'Agriculture',
-    'DBC': 'Commodities Index',
-    'UNG': 'Natural Gas',
-    'COPX': 'Copper Miners',
-    'PALL': 'Palladium'
+    'DBC': 'Commodity Index Tracking', 'PDBC': 'Optimum Yield Commodity', 'GSG': 'GSCI Commodity-Indexed',
+    'COMT': 'Commodities Strategy', 'FTGC': 'Global Commodities Strategy', 'GLD': 'Gold',
+    'IAU': 'Gold (Mini)', 'SLV': 'Silver', 'SIVR': 'Physical Silver', 'PPLT': 'Physical Platinum',
+    'PALL': 'Physical Palladium', 'SGOL': 'Physical Swiss Gold', 'USO': 'WTI Crude Oil',
+    'BNO': 'Brent Oil', 'UGA': 'Gasoline', 'UNG': 'Natural Gas', 'DBA': 'Agriculture',
+    'WEAT': 'Wheat', 'CORN': 'Corn', 'SOYB': 'Soybeans', 'CPER': 'Copper',
+    'JJC': 'Copper Index', 'LIT': 'Lithium & Battery Tech', 'URA': 'Uranium', 'COPX': 'Copper Miners',
+
+    # REAL ESTATE
+    'VNQ': 'Real Estate (US)', 'SCHH': 'US REIT ETF', 'IYR': 'US Real Estate',
+    'USRT': 'Core US REIT', 'REM': 'Mortgage Real Estate', 'MORT': 'VanEck Mortgage REIT',
+    'VNQI': 'Global ex-US Real Estate', 'RWX': 'Intl Real Estate', 'REET': 'Global Real Estate',
+
+    # CRYPTO
+    'BTC-USD': 'Bitcoin', 'ETH-USD': 'Ethereum', 'BNB-USD': 'Binance Coin',
+    'SOL-USD': 'Solana', 'XRP-USD': 'XRP', 'ADA-USD': 'Cardano',
+    'AVAX-USD': 'Avalanche', 'DOGE-USD': 'Dogecoin', 'DOT-USD': 'Polkadot',
+    'LINK-USD': 'Chainlink', 'MATIC-USD': 'Polygon', 'LTC-USD': 'Litecoin',
+
+    # MUTUAL FUNDS
+    'FXAIX': 'Fidelity 500 Index', 'VFIAX': 'Vanguard 500 Index', 'VTSAX': 'Vanguard Total Stock Market',
+    'VSMAX': 'Vanguard Small-Cap Index', 'VGSLX': 'Vanguard Real Estate Index', 'VTIAX': 'Vanguard Total Intl Stock',
+    'PTTRX': 'PIMCO Total Return', 'PONAX': 'PIMCO Income Fund', 'PRWCX': 'T. Rowe Price Capital App',
+    'VWENX': 'Vanguard Wellington', 'FDGRX': 'Fidelity Growth Company', 'FCNTX': 'Fidelity Contrafund',
+
+    # ALTERNATIVES & VOLATILITY
+    'VIXY': 'VIX Short-Term Futures', 'VXX': 'iPath Series B S&P 500 VIX', 'UVXY': 'ProShares Ultra VIX (1.5x)',
+    'SVXY': 'ProShares Short VIX (-0.5x)', 'QAI': 'IQ Hedge Multi-Strategy', 'MNA': 'IQ MacKay Shields Merger Arb',
+    'BTAL': 'AGFiQ US Market Neutral Anti-Beta', 'RLY': 'SPDR SSGA Multi-Asset Real Return',
+    'HTUS': 'Hull Tactical US', 'WTRE': 'WisdomTree Managed Futures Strategy',
+
+    # FX PAIRS
+    'EURUSD=X': 'EUR/USD', 'JPY=X': 'USD/JPY (Inverse)', 'GBPUSD=X': 'GBP/USD',
+    'AUDUSD=X': 'AUD/USD', 'CAD=X': 'USD/CAD (Inverse)', 'CHF=X': 'USD/CHF (Inverse)',
+    'NZDUSD=X': 'NZD/USD', 'CNY=X': 'USD/CNY (Inverse)', 'MXN=X': 'USD/MXN (Inverse)',
+    'BRL=X': 'USD/BRL (Inverse)', 'ZAR=X': 'USD/ZAR (Inverse)', 'INR=X': 'USD/INR (Inverse)'
 }
 
 ASSET_POOLS = {
-    'Actions_US': ['SPY', 'QQQ', 'IWM', 'XLE', 'XLF', 'XLK', 'XLV', 'XLY', 'XLP', 'XLU', 'XLI', 'XLB'],
-    'Actions_Intl': ['EFA', 'EEM', 'VGK', 'EWJ', 'MCHI', 'INDA'],
-    'Bonds': ['TLT', 'IEF', 'SHY', 'LQD', 'HYG', 'BNDX', 'EMB', 'TIP', 'AGG', 'MUB'],
-    'Commodities': ['GLD', 'SLV', 'USO', 'DBA', 'DBC', 'UNG', 'COPX', 'PALL']
+    'Equities US': [
+        'SPY', 'QQQ', 'IWM', 'DIA', 'VTI', 'VOO', 'IVV', 'RSP',                     
+        'XLE', 'XLF', 'XLK', 'XLV', 'XLY', 'XLP', 'XLU', 'XLI', 'XLB', 'XLRE', 'XLC', 
+        'MTUM', 'VLUE', 'QUAL', 'USMV', 'VIG', 'SCHD', 'VYM', 'SDY',                
+        'IWD', 'IWF', 'IJR', 'IWC'                                           
+    ],
+    'Equities Intl': [
+        'EFA', 'VEA', 'IEFA', 'EEM', 'VWO', 'IEMG',                                 
+        'VGK', 'EZU', 'EWJ', 'MCHI', 'INDA', 'EWZ', 'EWT', 'EWY', 'EWH', 'EWC',     
+        'EWA', 'EWL', 'EWG', 'EWQ', 'EWP', 'EWD', 'EWW', 'ECH', 'EPHE', 'EIDO'      
+    ],
+    'Bonds': [
+        'TLT', 'IEF', 'SHY', 'AGG', 'BND', 'GOVT', 'VGIT', 'VCIT', 'VCSH',          
+        'LQD', 'HYG', 'JNK', 'USIG', 'IGSB', 'SJNK',                                
+        'BNDX', 'EMB', 'VWOB', 'PCY', 'EBND',                                       
+        'TIP', 'VTIP', 'MUB', 'MBB', 'CWB', 'FALN'                                  
+    ],
+    'Commodities': [
+        'GLD', 'SLV', 'DBC', 'PDBC', 'GSG', 'COMT', 'FTGC',                                       
+        'IAU', 'SIVR', 'PPLT', 'PALL', 'SGOL',                        
+        'USO', 'BNO', 'UGA', 'UNG',                                                 
+        'DBA', 'WEAT', 'CORN', 'SOYB',                                              
+        'CPER', 'JJC', 'LIT', 'URA', 'COPX'                                         
+    ],
+    'Real Estate': [
+        'VNQ', 'SCHH', 'XLRE', 'IYR', 'USRT', 'REM', 'MORT',                        
+        'VNQI', 'RWX', 'REET'                                                       
+    ],
+    'Crypto': [
+        'BTC-USD', 'ETH-USD', 'BNB-USD', 'SOL-USD', 'XRP-USD', 'ADA-USD', 
+        'AVAX-USD', 'DOGE-USD', 'DOT-USD', 'LINK-USD', 'MATIC-USD', 'LTC-USD'
+    ],
+    'Mutual Funds': [
+        'FXAIX', 'VFIAX', 'VTSAX', 'VSMAX', 'VGSLX', 'VTIAX', 
+        'PTTRX', 'PONAX', 'PRWCX', 'VWENX', 'FDGRX', 'FCNTX'
+    ],
+    'Alternatives & Volatility': [
+        'VIXY', 'VXX', 'UVXY', 'SVXY',                                              
+        'QAI', 'MNA', 'BTAL', 'RLY', 'HTUS', 'WTRE'                                 
+    ],
+    'FX': [
+        'EURUSD=X', 'JPY=X', 'GBPUSD=X', 'AUDUSD=X', 'CAD=X', 'CHF=X',
+        'NZDUSD=X', 'CNY=X', 'MXN=X', 'BRL=X', 'ZAR=X', 'INR=X'
+    ]
 }
 
 def get_asset_name(ticker):
@@ -77,9 +150,9 @@ def get_universe(preset_name="Standard (12)"):
     
     elif preset_name == "Large (24)":
         return {
-            'Actions': ASSET_POOLS['Actions_US'][:8], 
+            'Actions': ASSET_POOLS['Equities US'][:8], 
             'Bonds': ASSET_POOLS['Bonds'][:8],       
-            'Commodities': ASSET_POOLS['Commodities'] 
+            'Commodities': ASSET_POOLS['Commodities'][:8] 
         }
 
     elif preset_name == "No Commodities":
@@ -90,7 +163,7 @@ def get_universe(preset_name="Standard (12)"):
         
     elif preset_name == "Global Macro (Max)":
         return {
-            'Actions': ['SPY', 'QQQ'] + ASSET_POOLS['Actions_Intl'],
+            'Actions': ['SPY', 'QQQ'] + ASSET_POOLS['Equities Intl'][:6],
             'Bonds': ASSET_POOLS['Bonds'][:6] + ['EMB'],
             'Commodities': ['GLD', 'USO', 'DBC']
         }
@@ -99,7 +172,7 @@ def get_universe(preset_name="Standard (12)"):
 
 TICKER_TO_CATEGORY = {}
 for category, tickers in ASSET_POOLS.items():
-    clean_cat = category.split('_')[0] 
+    clean_cat = category 
     for ticker in tickers:
         TICKER_TO_CATEGORY[ticker] = clean_cat
 

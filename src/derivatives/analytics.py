@@ -707,6 +707,44 @@ def plot_pnl(engine):
     
     return fig
 
+def plot_payoff_tarf(struct, spot_range=None):
+    """Plots the TARF periodic payout profile (Client View)."""
+    if spot_range is None:
+        spot_range = [struct.S * 0.5, struct.S * 1.5]
+    
+    spots = np.linspace(spot_range[0], spot_range[1], 200)
+    payoffs = []
+    
+    for s in spots:
+        if s >= struct.K:
+            payoffs.append(s - struct.K)
+        else:
+            payoffs.append((s - struct.K) * struct.leverage)
+            
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=spots, y=payoffs, 
+        mode='lines', 
+        name='Periodic Payout',
+        line=dict(color='#00CC96', width=3),
+        hovertemplate="Spot: %{x:.4f}<br>Payout: %{y:.4f}<extra></extra>"
+    ))
+
+    fig.add_vline(x=struct.K, line_dash="dash", line_color="gray", annotation_text=f"Strike: {struct.K:.4f}")
+    
+    fig.update_layout(
+        title="Periodic Payout Profile (Client View at fixing)",
+        xaxis_title="Spot Price at fixing date",
+        yaxis_title="Payout vs Strike",
+        template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
+        height=350,
+        margin=dict(l=20, r=20, t=40, b=20),
+        hovermode="x unified"
+    )
+    return fig
+
+
 
 # ==============================================================================
 # DISPATCHERS (To unify the API)
@@ -717,6 +755,8 @@ def plot_payoff(product, spot_range=None):
         return plot_payoff_european(product, spot_range)
     elif type(product).__name__ == "BarrierOption":
         return plot_payoff_barrier(product, spot_range)
+    elif type(product).__name__ == "TARF":
+        return plot_payoff_tarf(product, spot_range)
     return plot_payoff_phoenix(product, spot_range)
 
 def plot_price_vs_strike(product, current_spot):

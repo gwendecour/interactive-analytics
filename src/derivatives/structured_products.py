@@ -200,3 +200,127 @@ class AmericanOption(BinomialTreeEngine, NumericalGreeksEngine, FinancialInstrum
 
     def price(self):
         return self.price_tree()
+
+class TARF(MonteCarloEngine, NumericalGreeksEngine, FinancialInstrument):
+    """
+    Target Redemption Forward (TARF)
+    A popular corporate structured product (usually FX) where the client gets favorable
+    forward rates compared to the market, but the product terminates early (knocks out) 
+    once a target accumulated profit is reached.
+    """
+    def __init__(self, **kwargs):
+        S = float(kwargs.get('S'))
+        self.nominal = float(kwargs.get('nominal', S))
+        
+        self.strike = float(kwargs.get('K'))
+        self.target_profit = float(kwargs.get('target_profit'))
+        self.leverage = float(kwargs.get('leverage', 2.0)) # Often 2x leverage on the downside
+        
+        # Observations (fixings)
+        self.obs_frequency = kwargs.get('obs_frequency', 12) # Monthly by default
+        maturity = float(kwargs.get('T'))
+        
+        # Enforce constant high-res discretization
+        steps = max(300, int(maturity * 252))
+        self.steps = steps
+        
+        num_simulations = kwargs.get('num_simulations', 10000)
+        self.num_simulations = num_simulations
+
+        MonteCarloEngine.__init__(self, 
+            S=S, K=self.strike, T=maturity, 
+            r=kwargs.get('r'), 
+            sigma=kwargs.get('sigma'), 
+            q=kwargs.get('q', 0.0), 
+            num_simulations=num_simulations, 
+            num_steps=steps, 
+            seed=kwargs.get('seed')
+        )
+        
+        FinancialInstrument.__init__(self, **kwargs)
+
+    def get_observation_indices(self):
+        """Returns the array indices corresponding to fixing dates."""
+        if self.T <= 0: return []
+        num_obs = int(self.obs_frequency * self.T)
+        if num_obs == 0: return []
+        step_size = max(1, int(self.steps / num_obs))
+        indices = np.arange(step_size, self.steps + 1, step_size, dtype=int)
+        return indices
+
+    def calculate_payoffs_distribution(self):
+        """
+        Computes the payoff of the TARF.
+        Client buys the underlying at Strike K.
+        If S > K: client gains (S - K), accumulated towards Target.
+        If S < K: client loses Leverage * (K - S), does not count towards Target (usually).
+        """
+        paths = self.generate_paths() 
+        payoffs = np.zeros(self.N) # Discounted PV of the payoffs
+        accumulated_profits = np.zeros(self.N)
+        active_paths = np.ones(self.N, dtype=bool)
+        
+        indices = self.get_observation_indices()
+        
+        for i, idx in enumerate(indices):
+            if idx >= len(paths): break
+            current_prices = paths[idx]
+            
+            # Time for discounting
+            time_fraction = idx / float(self.steps) * self.T
+            df = np.exp(-self.r * time_fraction)
+            
+            # Client is LONG the asset at Strike K (often EUR/USD). 
+            # They win if S > K (they buy at K, sell to market at S).
+            # They lose if S < K (they are forced to buy at K, market is at S).
+            
+            # Calculate intrinsic gain/loss for this fixing period on active paths
+            gains = np.maximum(current_prices - self.strike, 0)
+            losses = np.maximum(self.strike - current_prices, 0) * self.leverage
+            
+            # Update accumulated target ONLY with positive gains (standard TARF mechanic)
+            # Mask so we only update paths that are still alive
+            gains_active = np.zeros(self.N)
+            gains_active[active_paths] = gains[active_paths]
+            
+            losses_active = np.zeros(self.N)
+            losses_active[active_paths] = losses[active_paths]
+            
+            # Check if target is breached
+            potential_acc = accumulated_profits + gains_active
+            
+            # Paths that knock out exactly on this date
+            knock_out_now = (potential_acc >= self.target_profit) & active_paths
+            
+            # Calculate final capped gain for the paths that just knocked out
+            # They only get up to the exact target profit (cap)
+            remaining_to_target = self.target_profit - accumulated_profits[knock_out_now]
+            final_capped_gains = np.minimum(gains_active[knock_out_now], remaining_to_target)
+            
+            # Add PV of cashflows
+            # 1. Paths that knock out now (capped gain)
+            if np.any(knock_out_now):
+                payoffs[knock_out_now] += final_capped_gains * self.nominal * df
+            
+            # 2. Paths that survive (full gain or full leveraged loss)
+            survivors_after = active_paths & ~knock_out_now
+            if np.any(survivors_after):
+                payoffs[survivors_after] += (gains_active[survivors_after] - losses_active[survivors_after]) * self.nominal * df
+                
+            # Update accumulators and active status
+            accumulated_profits[survivors_after] += gains_active[survivors_after]
+            active_paths[knock_out_now] = False
+            
+            if not np.any(active_paths): break
+            
+        return payoffs
+
+    def price(self):
+        """Returns the fair value from the issuer's perspective."""
+        # By convention, the engine prices the payoff TO THE CLIENT.
+        # But a TARF is a ZERO-COST structure at inception. The client pays nothing.
+        # Therefore, the fair value (PV of client payoffs) should theoretically be exactly 0.0 at inception.
+        # If PV > 0, the client has an edge. If PV < 0, the bank has the edge (margin).
+        # We return the PV to the client.
+        payoffs = self.calculate_payoffs_distribution()
+        return np.mean(payoffs)

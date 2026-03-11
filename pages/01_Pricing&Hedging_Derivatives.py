@@ -362,7 +362,7 @@ with st.container(border=True):
     with c2:
         selected_product = st.selectbox(
             "Product", 
-            options=["Call", "Put", "Barrier Option", "Phoenix"], 
+            options=["Call", "Put", "Barrier Option", "Phoenix", "TARF"], 
             index=None, 
             placeholder="Select Product...", 
             key="global_product_type",
@@ -408,7 +408,7 @@ import datetime
 
 from src.derivatives.instruments import InstrumentFactory
 from src.derivatives.pricing_model import EuropeanOption
-from src.derivatives.structured_products import PhoenixStructure, BarrierOption, AmericanOption
+from src.derivatives.structured_products import PhoenixStructure, BarrierOption, AmericanOption, TARF
 from src.derivatives.backtester import DeltaHedgingEngine
 import src.derivatives.analytics as analytics
 import src.derivatives.cache_manager as cache_manager
@@ -501,6 +501,23 @@ if selected_tab == "Pricing & Payoff":
                 with b3: st.button("ITM", on_click=set_pricing_scenario, args=("ITM",), use_container_width=True)
                 with b4: st.button("OTM", on_click=set_pricing_scenario, args=("OTM",), use_container_width=True)
 
+        elif p_type == "TARF":
+            make_input_group("Fwd Strike (%)", "strike_pct", 50.0, 150.0, 1.0)
+            strike_price = S * (st.session_state.strike_pct / 100.0)
+            st.caption(f"Fwd Strike: **{strike_price:.4f}**")
+            
+            tgt_prof = st.number_input("Target Profit (Absolute Amount)", min_value=0.0001, value=st.session_state.get('tarf_tgt', S * 0.05), step=0.01, format="%.4f", help="The structure knocks out when accumulated client profit reaches this amount.")
+            st.session_state.tarf_tgt = tgt_prof
+            
+            lev = st.number_input("Downside Leverage", min_value=0.1, value=st.session_state.get('tarf_lev', 2.0), step=0.5, format="%.2f", help="Multiplier applied to client losses if Spot falls below Strike.")
+            st.session_state.tarf_lev = lev
+            
+            n_sims = st.selectbox("Sims", [2000, 5000, 10000], index=0, key="tarf_sims")
+            
+            st.write("")
+            st.markdown("### Resets")
+            st.button("Reset Market Values", on_click=set_pricing_scenario, args=("Reset",), use_container_width=True)
+
         elif p_type in ["Call", "Put"]:
             make_input_group("Moneyness (%)", "strike_pct", 50.0, 150.0, 1.0)
             strike_price = S * (st.session_state.strike_pct / 100.0)
@@ -582,6 +599,46 @@ if selected_tab == "Pricing & Payoff":
             window_msg = f"(Window: M{w_s*12:.0f}-M{w_e*12:.0f})" if use_w else "(Continuous)"
             note = f"Monte Carlo Pricer ({product.num_simulations} sims): Simulates daily tracking for breach analysis {window_msg}."
             
+        elif p_type == "TARF":
+            from scipy.optimize import root_scalar
+            
+            strike_val = S * (st.session_state.strike_pct / 100.0)
+            target_amount = st.session_state.get('tarf_tgt', S * 0.05)
+            lev_val = st.session_state.get('tarf_lev', 2.0)
+            
+            product = TARF(
+                S=S, K=strike_val, T=maturity, r=r, sigma=sigma, q=q,
+                target_profit=target_amount, leverage=lev_val,
+                obs_frequency=12, num_simulations=st.session_state.get("tarf_sims", 5000)
+            )
+            price = product.price() # Pricing the client's PV
+            fig_main = analytics.plot_payoff(product, spot_range=[S*0.7, S*1.3])
+            metric_lbl, metric_val = "Fair Fwd Strike", "Solve for 0 € PV"
+            payoff_exp = f"**Target Redemption Forward**<br>Client captures highly favorable rate {strike_val:.4f}. But if Spot < {strike_val:.4f}, Client pays losses x{lev_val}."
+            
+            # Sub-function to solve for fair strike
+            def solve_tarf_strike():
+                def objective(k_pct):
+                    test_strike = S * (k_pct / 100.0)
+                    test_prod = TARF(
+                        S=S, K=test_strike, T=maturity, r=r, sigma=sigma, q=q,
+                        target_profit=target_amount, leverage=lev_val,
+                        obs_frequency=12, num_simulations=2000 # Lower sims for speed in solver
+                    )
+                    return test_prod.price()
+                
+                with st.spinner("Finding Fair Strike (0.00 PV)..."):
+                    try:
+                        # For a buyer, a lower strike is more valuable (positive PV). A higher strike is less valuable (negative PV).
+                        # Root finding between 50% and 150% moneyness
+                        res = root_scalar(objective, bracket=[50, 150], method='brentq', xtol=0.01)
+                        if res.converged:
+                            st.session_state.strike_pct = float(res.root)
+                        else:
+                            st.warning("Solver failed to converge.")
+                    except ValueError:
+                        st.warning("Could not find a valid bracket for the 0 PV strike.")
+            
         else:
             strike_val = S * (st.session_state.strike_pct / 100.0)
             opt_type = "call" if "Call" in p_type else "put"
@@ -599,16 +656,19 @@ if selected_tab == "Pricing & Payoff":
         k2.metric("% Nominal", f"{(price/S)*100:.2f} %")
         k3.metric(metric_lbl, metric_val)
         
+        if p_type == "TARF":
+            _, cent, _ = st.columns([1, 1, 1])
+            with cent:
+                st.button("Auto-Solve Fair Strike (0 PV)", on_click=solve_tarf_strike, use_container_width=True, type="primary")
+
         # Convergence Graph for Monte Carlo engines
-        if type(product).__name__ in ["PhoenixStructure", "BarrierOption"]:
+        if type(product).__name__ in ["PhoenixStructure", "BarrierOption", "TARF"]:
             with st.expander("Monte Carlo Simulation Variance & Convergence", expanded=False):
                 st.markdown("Because African/American Options and Exotics rely on randomized paths, prices vary subtly between runs. Increasing $N$ reduces this variance (Law of Large Numbers).")
                 with st.spinner("Simulating convergence path..."):
                     fig_conv = analytics.plot_mc_convergence(product, max_sims=getattr(product, 'num_simulations', 5000))
                     if fig_conv:
                         st.plotly_chart(fig_conv, use_container_width=True)
-
-
         
         with st.expander("Model & Algorithm Details (How is the price calculated?)"):
             if p_type == "Phoenix" or type(product).__name__ == "BarrierOption":
@@ -624,6 +684,20 @@ if selected_tab == "Pricing & Payoff":
         *   **Payoff Calculation:** We determine the cash flows for each specific path (Coupons paid, early redemption, terminal payout or barrier breakage).
         *   **Discounting:** We discount the average payoff back to present value using the risk-free rate $r$.
             * $Price = e^{-rT} \cdot \mathbb{E}^{\mathbb{Q}}[\text{Payoff}]$
+        """)
+            elif p_type == "TARF":
+                st.markdown("""
+        **Pricing Engine: Monte Carlo Simulation**
+        
+        A **Target Redemption Forward (TARF)** is primarily used by corporates to hedge Forex (FX) exposure or Commodity buys. The client locks a `Strike` price. Because this structured product contains an 'accumulator' triggering an early knock-out, the payoff is heavily **Path-Dependent**.
+        
+        **Algorithm Steps:**
+        * **Diffusion:** Paths simulated using Geometric Brownian Motion.
+        * **Accumulation Check:** At every monthly fixing date, the engine checks the trade result:
+            * If `Spot > Strike`: The client's virtual gain `Spot - Strike` is added to their Accumulator.
+            * If `Spot < Strike`: The client loses money, amplified by the `Leverage` factor. This does not help them reach the knockout target.
+        * **Knock-Out:** The moment the Accumulator touches `Target Profit`, the trade automatically terminates, and that fixing's payout is capped to perfectly hit the target.
+        * **Fair Value Pricing:** By convention, the bank prices the PV for the Client. Because the client enters this structural trade for "free", **the PV of all future cashflows should ideally equal exactly 0.00 at inception**. If it is positive, the client has an edge, if negative, the bank has margin.
         """)
             elif type(product).__name__ == "AmericanOption":
                 st.markdown("""
@@ -683,6 +757,17 @@ if selected_tab == "Pricing & Payoff":
             **Autocall / Cap (> {a_lvl:.2f} €):** Above the Autocall level. You get **100% Capital + Coupon**. The performance is capped (you don't benefit from the stock's rise beyond the coupon).
             """)
             
+        elif p_type == "TARF":
+             st.markdown(f"""
+             **What is a TARF?**
+             
+             A TARF is a Zero-Cost structure. The client pays 0 upfront. 
+             Historically, it's 95% used by corporations to hedge **Foreign Exchange (FX)** risk (hence 'Forward'). For example, a European airline knowing it needs to buy USD all year might buy a TARF EUR/USD locking a great buying rate, until their target saving is achieved.
+             However, it can theoretically be structured on Equities or Commodities (Oil) when a buyer wants to systematically accumulate an asset below market value.
+             
+             ***In this Pricing output:*** 
+             The value calculated is the Present Value (PV) of the **Client's expected payouts**. Since this is a zero-cost structure, the **"Fair Value" strike should be the one that sets this Price to 0.00 €**.
+             """)
         elif p_type == "Call":
              k_val = S * (st.session_state.strike_pct / 100.0)
              st.markdown(f"**Call Payoff:** Client profit if Spot > Strike (**{k_val:.2f} €**). It's the opposite for the bank Short Call")
@@ -712,6 +797,10 @@ if selected_tab == "Pricing & Payoff":
                 note = "**Trend:** Sharp rise below Protection Barrier, steady in Coupon Zone, flat above Autocall."
             elif p_type == "Barrier Option":
                 note = "**Trend:** Varies greatly depending on the interplay between Strike and Barrier level."
+            elif p_type == "TARF":
+                note = "**Trend:** Negative correlation to Strike. The farther away the Strike, the more expensive the PV for the client."
+            else:
+                note = ""
             st.caption(note)
             
     with graph_col2:
@@ -725,6 +814,8 @@ if selected_tab == "Pricing & Payoff":
                 note_vol = "**Trend:** Negative Vega. Higher volatility increases the risk of hitting the downside barrier, lowering the price."
             elif p_type == "Barrier Option":
                 note_vol = "**Trend:** Mixed Vega. Increased volatility increases the chance of hitting the barrier (good for knock-in, bad for knock-out)."
+            elif p_type == "TARF":
+                note_vol = "**Trend:** Negative Vega for the buyer. The buyer is short Vega due to the knock-out cap on the upside, and the leveraged downside risk."
             st.caption(note_vol)
 
         # --- BACKGROUND PRE-WARMING ---
@@ -929,6 +1020,20 @@ elif selected_tab == "Greeks & Heatmaps":
                 c_greeks = prod_gk.greeks()
             greeks = {k: -v for k, v in c_greeks.items()}
 
+        elif p_type == "TARF":
+            strike_val = fixed_strike
+            target_amount = st.session_state.get('tarf_tgt', S * 0.05)
+            lev_val = st.session_state.get('tarf_lev', 2.0)
+            
+            prod_gk = TARF(
+                S=dyn_spot, K=strike_val, T=fixed_maturity, r=r, sigma=dyn_vol, q=q,
+                target_profit=target_amount, leverage=lev_val,
+                obs_frequency=12, num_simulations=1000
+            )
+            with st.spinner("Computing TARF Greeks..."):
+                c_greeks = prod_gk.greeks()
+            greeks = {k: -v for k, v in c_greeks.items()}
+
         else:
             # Vanilla Case
             opt_type = "call" if "Call" in p_type else "put"
@@ -951,8 +1056,8 @@ elif selected_tab == "Greeks & Heatmaps":
         
         with st.expander("How are Greeks calculated? (Methodology)"):
     
-            # CAS 1 : PRODUIT COMPLEXE (PHOENIX)
-            if p_type == "Phoenix":
+            # CAS 1 : PRODUIT COMPLEXE (PHOENIX / BARRIER / TARF)
+            if type(prod_gk).__name__ in ["PhoenixStructure", "BarrierOption", "TARF"]:
                 st.markdown(r"""
         **Method: Finite Differences ("Bump & Revalue")**
         
@@ -1036,6 +1141,14 @@ elif selected_tab == "Greeks & Heatmaps":
                 window_start=w_s_r, window_end=w_e_r,
                 num_simulations=st.session_state.get("bar_sims", 2000),
                 execution_style=st.session_state.get("bar_style", "European").lower()
+            )
+        elif p_type == "TARF":
+            opt_type_r = "TARF"
+            prod_ref = TARF(
+                S=ref_value, K=fixed_strike, T=fixed_maturity, r=r, sigma=sigma, q=q,
+                target_profit=st.session_state.get('tarf_tgt', ref_value * 0.05), 
+                leverage=st.session_state.get('tarf_lev', 2.0),
+                obs_frequency=12, num_simulations=1000
             )
         else:
             opt_type = "call" if "Call" in p_type else "put"
@@ -1193,8 +1306,8 @@ elif selected_tab == "Greeks & Heatmaps":
             fig_structure = analytics.plot_greeks_profile(prod_gk)
             st.plotly_chart(fig_structure, use_container_width=True)
             
-    elif p_type == "Phoenix":
-        st.markdown("Structural Analysis graphs are disabled for Phoenix (Computationally too heavy).")
+    elif type(prod_gk).__name__ in ["PhoenixStructure", "TARF", "BarrierOption"]:
+        st.markdown("Structural Analysis graphs are disabled for Complex Path-Dependent products as it requires generating thousands of matrices computationally heavy for a real-time web UI.")
 
 # ==============================================================================
 # TAB 3: BACKTEST
@@ -1232,6 +1345,18 @@ elif selected_tab == "Delta Hedging":
             with phx_c5:
                 bt_maturity = st.number_input("Maturity (Years)", value=5.0, step=1.0, min_value=0.5, key="bt_mat_phx")
                 
+        elif p_type == "TARF":
+            # --- TARF SETUP ---
+            tarf_c1, tarf_c2, tarf_c3, tarf_c4 = st.columns(4)
+            with tarf_c1:
+                bt_strike_pct = st.number_input("Fwd Strike % Init Spot", value=1.00, step=0.01, key="bt_strike_input_tarf")
+            with tarf_c2:
+                bt_maturity = st.number_input("Max Maturity (Years)", value=2.0, step=0.5, min_value=0.5, key="bt_mat_tarf")
+            with tarf_c3:
+                bt_target = st.number_input("Target Profit", value=0.05, step=0.01, min_value=0.0001, format="%.4f", key="bt_tgt_input_tarf")
+            with tarf_c4:
+                bt_lev = st.number_input("Leverage", value=2.0, step=0.5, min_value=0.1, key="bt_lev_input_tarf")
+
         else:
             # --- VANILLA SETUP ---
             vanilla_c1, vanilla_c2 = st.columns([2, 2])
@@ -1318,6 +1443,20 @@ elif selected_tab == "Delta Hedging":
                             obs_frequency=4, 
                             num_simulations=2000
                         )
+                    elif p_type == "TARF":
+                        strike_bt = init_spot * bt_strike_pct
+                        opt_hedge = TARF(
+                            S=init_spot, 
+                            K=strike_bt, 
+                            T=safe_maturity, 
+                            r=r, 
+                            sigma=sold_vol, 
+                            q=q,
+                            target_profit=bt_target,
+                            leverage=bt_lev,
+                            obs_frequency=12,
+                            num_simulations=2000
+                        )
                     else:
                         strike_bt = init_spot * bt_strike_pct
                         is_call = "Call" in p_type
@@ -1357,6 +1496,9 @@ elif selected_tab == "Delta Hedging":
                         st.markdown(f"Status: Product {status} on {final_date_str} "
                                 f"(Duration: {duration:.1f} months). "
                                 f"The client received {coupons} coupons.")
+                    elif p_type == "TARF":
+                        st.markdown(f"Status: TARF {status} on {final_date_str} "
+                                f"(Duration: {duration:.1f} months). ")
                     else:
                         strike_val = init_spot * bt_strike_pct
                         is_call = "Call" in p_type

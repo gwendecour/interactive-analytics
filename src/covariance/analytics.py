@@ -62,6 +62,46 @@ class QuantAnalytics:
         return fig
 
     @staticmethod
+    def plot_eigenvalue_squeezing(emp_cov: pd.DataFrame, lw_cov: pd.DataFrame) -> go.Figure:
+        """
+        Visualizes the 'Eigenvalue Squeezing' effect of Ledoit-Wolf Shrinkage.
+        """
+        # Calculate eigenvalues
+        emp_evals = np.linalg.eigvalsh(emp_cov.values)
+        lw_evals = np.linalg.eigvalsh(lw_cov.values)
+        
+        # Sort in descending order
+        emp_evals = np.sort(emp_evals)[::-1]
+        lw_evals = np.sort(lw_evals)[::-1]
+        
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=list(range(1, len(emp_evals) + 1)), y=emp_evals,
+            mode='lines+markers', name='Empirical Covariance',
+            line=dict(color='deepskyblue', width=2),
+            marker=dict(size=8)
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=list(range(1, len(lw_evals) + 1)), y=lw_evals,
+            mode='lines+markers', name='Ledoit-Wolf Covariance',
+            line=dict(color='orange', width=2),
+            marker=dict(size=8)
+        ))
+        
+        fig.update_layout(
+            title="Eigenvalue Squeezing Effect (Ledoit-Wolf Regularization)",
+            xaxis_title="Principal Component Rank (Sorted)",
+            yaxis_title="Eigenvalue Magnitude (Log Scale)",
+            yaxis_type="log",
+            template="plotly_dark" if st.session_state.get("theme", "dark") == "dark" else "plotly_white",
+            height=400,
+            hovermode="x unified"
+        )
+        return fig
+
+    @staticmethod
     def plot_returns_distribution(true_prices: pd.Series, imputed_prices: pd.Series, model_name: str, display_mode="Histograms") -> go.Figure:
         """
         KDE/Histogram plot of daily log-returns to visualize the volatility collapse (spike at 0).
@@ -119,10 +159,14 @@ class QuantAnalytics:
     @staticmethod
     def plot_error_heatmap(true_cov: pd.DataFrame, imputed_cov: pd.DataFrame, model_name: str) -> go.Figure:
         """
-        Visual Absolute Difference Heatmap (|True - Imputed|).
+        Visual Absolute Difference Heatmap of Correlations (|True Corr - Imputed Corr|).
         Highlights which cross-asset correlations were the most destroyed.
         """
-        diff_matrix = np.abs(true_cov - imputed_cov)
+        # Convert Covariance to Correlation to isolate relationship errors (ignoring variance collapse scale)
+        true_corr = true_cov.corr()
+        imputed_corr = imputed_cov.corr()
+        
+        diff_matrix = np.abs(true_corr - imputed_corr)
         max_err = np.max(diff_matrix.values) + 1e-6
         
         fig = px.imshow(
@@ -135,7 +179,7 @@ class QuantAnalytics:
         )
         
         fig.update_layout(
-            title=f"Absolute Covariance Error (|True - {model_name}|)",
+            title=f"Absolute Correlation Error (|True - {model_name}|)",
             xaxis_title=None, yaxis_title=None,
             height=600, width=600
         )

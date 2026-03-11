@@ -141,7 +141,14 @@ def get_universe(preset_name="Standard (12)"):
     """
     Returns a dictionary of selected tickers grouped by asset class based on the UI preset.
     """
-    if preset_name == "Standard (12)":
+    if preset_name == "Small (6)":
+        return {
+            'Actions': ['SPY', 'QQQ'],
+            'Bonds': ['TLT', 'IEF'],
+            'Commodities': ['GLD', 'SLV']
+        }
+    
+    elif preset_name == "Standard (12)":
         return {
             'Actions': ['SPY', 'QQQ', 'XLE', 'XLK'],
             'Bonds': ['TLT', 'IEF', 'LQD', 'HYG'],
@@ -154,18 +161,12 @@ def get_universe(preset_name="Standard (12)"):
             'Bonds': ASSET_POOLS['Bonds'][:8],       
             'Commodities': ASSET_POOLS['Commodities'][:8] 
         }
-
-    elif preset_name == "No Commodities":
-        return {
-            'Actions': ['SPY', 'QQQ', 'IWM', 'XLE', 'XLF', 'XLK'],
-            'Bonds': ['TLT', 'IEF', 'SHY', 'LQD', 'HYG', 'TIP']
-        }
         
-    elif preset_name == "Global Macro (Max)":
+    elif preset_name == "Global Macro (Max - 48)":
         return {
-            'Actions': ['SPY', 'QQQ'] + ASSET_POOLS['Equities Intl'][:6],
-            'Bonds': ASSET_POOLS['Bonds'][:6] + ['EMB'],
-            'Commodities': ['GLD', 'USO', 'DBC']
+            'Actions': ASSET_POOLS['Equities US'][:16],
+            'Bonds': ASSET_POOLS['Bonds'][:16],
+            'Commodities': ASSET_POOLS['Commodities'][:16]
         }
     
     return get_universe("Standard (12)")

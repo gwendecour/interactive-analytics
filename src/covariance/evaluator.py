@@ -11,19 +11,33 @@ class CovarianceMatrixEstimator:
     def __init__(self, ann_factor: int = 252):
         self.ann_factor = ann_factor
 
-    def estimate(self, prices_df: pd.DataFrame) -> pd.DataFrame:
+    def estimate(self, prices_df: pd.DataFrame, apply_ledoit_wolf: bool = False) -> pd.DataFrame:
         """
         Calculates the annualized sample covariance matrix from daily prices.
-        Regularizes slightly if matrix condition is poor.
+        Optionally applies Ledoit-Wolf shrinkage to regularize the matrix against noise.
         """
-        returns = np.log(prices_df / prices_df.shift(1)).dropna()
-        cov_matrix = returns.cov() * self.ann_factor
+        returns = np.log(prices_df / prices_df.shift(1))
         
-        eps = 1e-8
-        np_cov = cov_matrix.values
-        np_cov = np_cov + np.eye(np_cov.shape[0]) * eps
-        
-        return pd.DataFrame(np_cov, index=cov_matrix.index, columns=cov_matrix.columns)
+        if apply_ledoit_wolf:
+            from sklearn.covariance import LedoitWolf
+            lw = LedoitWolf()
+            # Ledoit-Wolf cannot handle NaNs natively, must drop them for the fitting process
+            valid_returns = returns.dropna()
+            if valid_returns.empty:
+               # Fallback if no full rows remain
+               np_cov = returns.cov().values * self.ann_factor
+               self.last_shrinkage = 0.0
+            else:
+               np_cov = lw.fit(valid_returns.values).covariance_ * self.ann_factor
+               self.last_shrinkage = lw.shrinkage_
+        else:
+            cov_matrix = returns.cov() * self.ann_factor
+            eps = 1e-8
+            np_cov = cov_matrix.values
+            np_cov = np_cov + np.eye(np_cov.shape[0]) * eps
+            self.last_shrinkage = 0.0
+            
+        return pd.DataFrame(np_cov, index=returns.columns, columns=returns.columns)
 
 
 class ErrorMetrics:

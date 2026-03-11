@@ -25,29 +25,29 @@ with st.expander("The motivations behind this project"):
     As a result, a Minimum Variance Portfolio Optimizer will be actively misled into over-allocating to these "falsely stable" assets, generating a massive *Ex-Post Risk* that wasn't priced in. This dashboard precisely compares advanced mathematical imputations (KNN, Matrix Reconstruction, Expectation-Maximization) against the naïve industry baseline to resolve this hidden risk.
     """)
 
-# --- SIDEBAR CONFIGURATION ---
-st.sidebar.header("Data Universe & Corruption")
-
-# Mutualized Asset Universe selection
-preset_options = ["Standard (12)", "Large (24)", "No Commodities", "Global Macro (Max)"]
-pool_choice = st.sidebar.selectbox("Select Asset Universe", preset_options, index=0)
-universe_dict = get_universe(pool_choice)
-
-# Flatten the dictionary into a list of tickers
-tickers = []
-for cat, t_list in universe_dict.items():
-    tickers.extend(t_list)
-
 st.sidebar.markdown("---")
 monte_carlo_runs = st.sidebar.slider("Monte-Carlo Runs (Stability Analysis)", 2, 20, 5, step=1, help="Impacts specifically the Boxplot computation time in Tab 2.")
 
 st.markdown("### Illiquidity Simulation Parameters")
-col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
+col_p0, col_p1, col_p2, col_p3 = st.columns([1, 1, 1, 1])
+
+with col_p0:
+    # Mutualized Asset Universe selection
+    preset_options = ["Small (6)", "Standard (12)", "Large (24)", "Global Macro (Max - 48)"]
+    pool_choice = st.selectbox("Asset Universe", preset_options, index=1)
+    universe_dict = get_universe(pool_choice)
+
+    # Flatten the dictionary into a list of tickers
+    tickers = []
+    for cat, t_list in universe_dict.items():
+        tickers.extend(t_list)
 
 with col_p1:
     target_illiquid = st.multiselect("Target Illiquid Assets", tickers, default=tickers[:2] if len(tickers)>1 else tickers, format_func=get_asset_name, help="Assets that will suffer from randomly missing prices.")
+    
 with col_p2:
-    missing_rate = st.slider("Missing Data Probability (%)", 0, 80, 20, step=5) / 100.0
+    missing_rate = st.slider("Missing Probability (%)", 0, 80, 20, step=5) / 100.0
+    
 with col_p3:
     duration_str = st.selectbox(
         "Backtest Duration", 
@@ -156,12 +156,15 @@ def compute_stability_metrics(tickers_list, start, end, target_tickers, miss_rat
     return pd.DataFrame(mc_results)
 
 @st.cache_data(show_spinner="Solving Optimal Portfolio Allocations...")
-def compute_portfolio_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method, port_strategy):
+def compute_portfolio_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method, port_strategy, apply_lw=False):
     models = get_models()
     optimizer = PortfolioOptimizer()
+    estimator = CovarianceMatrixEstimator(ann_factor=252)
     
     # Fast fetch from cache
-    _, _, true_cov, _, imputed_covs, _, _ = compute_base_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method)
+    gt_df, _, true_cov, imputed_prices_df, imputed_covs, _, _ = compute_base_metrics(tickers_list, start, end, target_tickers, miss_rate, m_method)
+    
+    true_cov_opt = estimator.estimate(gt_df, apply_ledoit_wolf=apply_lw) if apply_lw else true_cov
     
     def optimize(cov, strat):
         if "Risk Parity" in strat:
@@ -171,13 +174,17 @@ def compute_portfolio_metrics(tickers_list, start, end, target_tickers, miss_rat
         else:
             return optimizer.min_variance_portfolio(cov)
             
-    true_weights = optimize(true_cov, port_strategy)
+    true_weights = optimize(true_cov_opt, port_strategy)
     
     imputed_weights = {}
     risk_metrics = {}
     
     for name in models.keys():
-        cov_est = imputed_covs[name]
+        if apply_lw:
+            cov_est = estimator.estimate(imputed_prices_df[name], apply_ledoit_wolf=True)
+        else:
+            cov_est = imputed_covs[name]
+            
         weights_est = optimize(cov_est, port_strategy)
         imputed_weights[name] = weights_est
         risk_metrics[name] = optimizer.evaluate_risk(weights_est, true_cov, cov_est)
@@ -312,15 +319,36 @@ if selected_tab == " 2. Systemic Structure":
     with col_select:
         single_sys_model = st.selectbox("In-Depth View Model", all_model_names, index=0, key="sys_model")
             
-    st.markdown(f"### Covariance Error Heatmap")
+    st.markdown(f"### Correlation Error Heatmap")
     st.markdown(f"Distance Score (Frobenius Norm): **{frobenius_dist[single_sys_model]:.4f}**")
     fig_hm = QuantAnalytics.plot_error_heatmap(true_cov, imputed_covs[single_sys_model], single_sys_model)
     st.plotly_chart(fig_hm, use_container_width=True)
-    with st.expander("Covariance Error Heatmap"):
+    with st.expander("Correlation Error Heatmap"):
         st.write("""
-        **This heatmap shows the literal difference between the True Covariance Matrix and the Estimated one.** 
-        Deep red or blue spots indicate that the algorithm has completely misunderstood the relationship between two specific assets. Forward-Fill typically destroys covariance because artificial 0-returns on one asset don't correlate with the moves of another.
+        **This heatmap shows the literal difference in Correlation (%) between the True Matrix and the Estimated one.** 
+        Deep red spots indicate that the algorithm has completely misunderstood the relationship between two specific assets. Forward-Fill typically destroys correlation because artificial 0-returns on an illiquid asset don't correlate with the moves of active assets.
         """)
+        
+    st.markdown("---")
+    st.markdown("### Covariance Regularization (Ledoit-Wolf Shrinkage)")
+    with st.expander("Why do we need Covariance Shrinkage?"):
+        st.write("""
+        **The Empirical Covariance matrix is extremely noisy**, especially when the number of assets is high relatively to the number of historical observations. This noise artificially inflates the highest correlations and deflates the lowest ones, creating false extremities.
+
+        **Ledoit-Wolf Shrinkage** systematically corrects this by computing a weighted average between the noisy empirical matrix and a structured, constrained Target Matrix (like an identity or constant correlation matrix).
+        
+        The result is a mathematically optimal **Shrinkage Intensity ($\\alpha$)**, which 'squeezes' the distorted extreme eigenvalues towards the center, preventing Portfolio Optimizers from allocating massive capital weights to false correlations.
+        """)
+        
+    lw_estimator = CovarianceMatrixEstimator(ann_factor=252)
+    lw_cov = lw_estimator.estimate(imputed_prices[single_sys_model], apply_ledoit_wolf=True)
+    shrinkage_alpha = lw_estimator.last_shrinkage
+
+    st.metric(label=f"Optimal Shrinkage Intensity (α) for {single_sys_model}", value=f"{shrinkage_alpha:.4f}", help="0 = Empirical Matrix, 1 = Target Matrix")
+
+    fig_eig = QuantAnalytics.plot_eigenvalue_squeezing(imputed_covs[single_sys_model], lw_cov)
+    st.plotly_chart(fig_eig, use_container_width=True)
+
     st.markdown("---")
     st.markdown("### Multi-Model Scatter Cross-Correlation")
     selected_scatter = st.multiselect(
@@ -397,10 +425,11 @@ if selected_tab == " 4. Business Impact":
         index=0,
         help="Determines how the weights are assigned based on the covariance matrix."
     )
+    apply_lw = st.checkbox("Apply Ledoit-Wolf Regularization before optimization", value=False, help="Shrinks the estimated covariance matrix to reduce noise and extreme false correlations.")
     st.markdown("---")
         
     try:
-        true_weights, imputed_weights, risk_metrics = compute_portfolio_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, portfolio_strategy)
+        true_weights, imputed_weights, risk_metrics = compute_portfolio_metrics(tuple(tickers), start_date, end_date, tuple(target_illiquid), missing_rate, corruption_tag, portfolio_strategy, apply_lw)
     except Exception as e:
         st.error(f"Error executing Portfolio solver: {e}")
         st.stop()
